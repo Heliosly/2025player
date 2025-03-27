@@ -12,6 +12,7 @@
 #include <QLoggingCategory>
 //#include<QTextCodec>
 #include "mainwindow.h"
+#include"metadata.h"
 
 DWIDGET_USE_NAMESPACE
 
@@ -21,6 +22,8 @@ int main(int argc, char *argv[])
 
     QGuiApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     DApplication a(argc, argv);
+
+    qRegisterMetaType<MetaData>("MetaData"); // 如果信号参数是引用
     QLoggingCategory::defaultCategory()->setEnabled(QtDebugMsg, true);
     a.setOrganizationName("deepin");
     a.setApplicationName("dtk-application");

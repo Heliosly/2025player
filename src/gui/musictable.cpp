@@ -29,12 +29,70 @@ MusicTable::MusicTable()
     // connect(selectDir,&DPushButton::clicked,this, &MusicTable::bt_selectDir);
     connect(searchEdit, &DLineEdit::textChanged, this, &MusicTable::onSearchTextChange);
 
-    connect(&MusicPlayer::instance(), &MusicPlayer::mediaListChanged, this, &MusicTable::resetMusicTable);
+    connect(&MusicPlayer::instance(), &MusicPlayer::mediaListAdd, this, &MusicTable::resetMusicTable,Qt::QueuedConnection);
     connect(SettingsManager::instance(), &SettingsManager::pathChange, this, &MusicTable::resetVideoTable);
     connect(&MusicPlayer::instance(),&MusicPlayer::historyListChange,this,&MusicTable::addHistoryItem);
     connect(&MusicPlayer::instance(),&MusicPlayer::historyListRemove,this,&MusicTable::loadHistoryTable);
+    connect(&MusicPlayer::instance(), &MusicPlayer::musicToMusictable,
+            this, &MusicTable::addMusic, Qt::QueuedConnection);
+    connect(&MusicPlayer::instance(),&MusicPlayer::mediaListSub,this,&MusicTable::deleteByDir,Qt::QueuedConnection);
+
+}
+void MusicTable::deleteByDir(const QString &dir){
+    auto &dirIndex=dirToIndex[dir];
+      for (auto it = dirIndex.rbegin(); it != dirIndex.rend(); ++it) {
+        QListWidgetItem *item = music_table->takeItem(*it);
+           delete item;  // 释放内存
+    }
+    dirToIndex.remove(dir);
 }
 
+void MusicTable::loadMoreData()
+{
+    if (m_loaded||m_loading || m_currentHint >= m_totalRows) {
+        return;
+    }
+    m_loading = true;
+
+    // 获取新数据
+    QList<MetaData> dataList = DataBase::instance()->getDataFromLocallistwithHint(m_currentHint, qMin(m_loadCount,m_totalRows-m_currentHint));
+    if (dataList.isEmpty()) {
+        m_loading = false;
+        m_loaded=true;
+        qDebug() << "No more data to load maybe load all data";
+        return;
+    }
+   
+    
+
+    for (const MetaData &music : dataList) {
+        
+        addMusic(music);
+    }
+
+    m_currentHint += dataList.size();
+    m_loading = false;
+}
+
+void MusicTable::onScrollValueChanged(int value)
+{
+    Q_UNUSED(value);
+
+    if (music_table->verticalScrollBar()->maximum() - value < 50) {
+        loadMoreData();
+    }
+}
+void MusicTable::setLoadParameters(int initialHint, int loadCount)
+{
+    m_currentHint = initialHint;
+    m_loadCount = loadCount;
+    
+}
+void MusicTable::setMusicCount(int value)
+{
+    music_table->verticalScrollBar()->setValue(value);
+    m_totalRows=value;
+}
 void MusicTable::initSource(){
       pathSelector = new PathSelector(this);
 
@@ -42,8 +100,12 @@ void MusicTable::initSource(){
 void MusicTable::initItem()
 {
 
+    m_loading=0;
     music_table = new QListWidget(this);
 
+    setMusicCount
+(DataBase::instance()->getListCount("locallist"));
+   setLoadParameters(0, 50); // 每次加载 50 行
     music_table->setObjectName("table_music");
     QList<QString> tableList; //
     // QStandardItemModel* headmodel = new QStandardItemModel;
@@ -78,8 +140,10 @@ void MusicTable::initItem()
     music_table->verticalScrollBar()->setMaximumWidth(7);
     music_table->setResizeMode(QListView::Adjust);
     //    title_table->verticalHeader()->setObjectName("music_verticalHeader");
-    loadMusicTable();
-
+    if(DataBase::instance()->countLocallist)loadMoreData();
+    else {
+        m_loaded=true;
+    }
     video_table = new DListView(this);
     video_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -114,15 +178,7 @@ void MusicTable::initItem()
     playAll->setObjectName("playallBtn");
     playAll->setIcon(QIcon(":/images/stackWidget/localMusic/btn_playall.png"));
 }
-void MusicTable::loadMusicTable()
-{
 
-        qDebug()<<MusicPlayer::instance().MMetalist.size()<<"music";
-    for (auto &i : MusicPlayer::instance().MMetalist)
-    {
-        addmusic(i);
-    }
-}
 void MusicTable::loadHistoryTable() {
     auto &history = MusicPlayer::instance().history;
     historyListModel->clear();  
@@ -260,7 +316,7 @@ void MusicTable::initLayout()
     music_table->setSpacing(10);
 }
 
-void MusicTable::addmusic(const MetaData &music)
+void MusicTable::addMusic(const MetaData &music)
 {
 
     int minutes = music.duration / 60;
@@ -348,7 +404,14 @@ void MusicTable::addmusic(const MetaData &music)
 
     music_table->setItemWidget(item02, view);
     music_table->addItem(item02);
-    listDlistView.append(view);
+
+    QFileInfo fileInfo(music.url);
+    QString path = fileInfo.absolutePath();  // 获取目录路径
+         if(!dirToIndex.contains(path)){
+
+         dirToIndex[path] = QList<int>();
+         }
+         dirToIndex[path].append(row);
 }
 
 void MusicTable::onBtPlayAll()
@@ -433,11 +496,19 @@ void MusicTable::setTheme(DGuiApplicationHelper::ColorType theme)
 }
 void MusicTable::onResetWindowSize(int width)
 {
-    windowsWidth = width;
-    for (auto i : listDlistView)
-    {
-        i->itemdelegate->factor = ((width - 900) * 5 / 18);
-        // qDebug()<<"factor:"<<i->itemdelegate->factor;
+    for (int i = 0; i < music_table->count(); ++i) {
+        QListWidgetItem *item = music_table->item(i);
+
+        // 获取与 QListWidgetItem 关联的 widget（即 CustomListView）
+        CustomListView* customListView = qobject_cast<CustomListView*>(music_table->itemWidget(item));
+
+        // 确保 customListView 不为空
+        if (customListView) {
+            customListView->itemdelegate->factor = ((width - 900) * 5 / 18);
+            // qDebug() << "factor:" << customListView->itemdelegate->factor;
+        } else {
+            qWarning() << "Failed to get CustomListView from itemWidget.";
+        }
     }
 }
 
@@ -469,8 +540,11 @@ void MusicTable::onSearchTextChange(QString text)
     }
 }
 void MusicTable::resetMusicTable()
-{        clearMusicTable();
-        loadMusicTable();
+{        
+        m_loaded=0;
+        setMusicCount(DataBase::instance()->countLocallist);
+
+
         if (windowsWidth != 0) {
             QMetaObject::invokeMethod(this, [this]() {
                 onResetWindowSize(windowsWidth);

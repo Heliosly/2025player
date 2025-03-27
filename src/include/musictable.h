@@ -25,6 +25,16 @@
  public:
      MusicTable();
 
+     void loadMoreData();
+
+     void deleteByDir(const QString&dir);
+     void onScrollValueChanged(int value);
+
+     void setLoadParameters(int initialHint, int loadCount);
+
+     void setMusicCount(int value);
+
+     QMap<QString,QList<int>> dirToIndex;
      DListWidget *music_table;
      DListView *video_table;
 
@@ -37,14 +47,18 @@
      PathSelector*pathSelector;
      QHBoxLayout *display_HBoxLayout;
      QStackedWidget *page;
-     QList<CustomListView*> listDlistView;
+     QVector<CustomListView*> listDlistView;
      QFrame *qf;
      QStandardItemModel*videoListModel;
      QStandardItemModel*historyListModel;
-     int windowsWidth=0;
+     int m_totalRows;      // 固定的总行数
+     int m_currentHint;    // 当前已加载的数据量
+     int m_loadCount;      // 每次加载的条数
+     bool m_loading;      //防止重复加载
+     int windowsWidth;
+     bool m_loaded;
 
 
-       void addmusic(const MetaData& music);
      void onResetWindowSize(int width);
   QString getUrlFromListView(int index);
 ///Controlbar的上一曲下一曲会经过这里
@@ -52,13 +66,13 @@
  public slots:
          void setTheme(DGuiApplicationHelper::ColorType);
          void clearMusicTable();
-         void loadMusicTable();
          void clearVideoTable();
          void loadVideoTable();
          void loadHistoryTable();
          void resetMusicTable();
          void resetVideoTable();
 
+       void addMusic(const MetaData& music);
          void onHistoryListRemove(int index);
        void addHistoryItem(const HistoryMData& item);
 

@@ -47,14 +47,15 @@ public:
 
     HistoryList history;
 
-    void initMusicByFilePath(const QString &mediaPath);
+    void initMusicByDir(const QString &mediaPath);
+
+    void addPathToDB(const QString &filePath);
 
     static MusicPlayer &instance()
     {
         static MusicPlayer player;
         return player;
     }
-    QVector<MetaData> MMetalist;
     //nh
     void play();
     void pause();
@@ -64,11 +65,13 @@ public:
     void setVolume(int volume);
     void setPosition(qint64 position);
     qint64 duration();
+
 //nh
 
+//下方所有load函数都仅仅是和数据库交互，而不直接和musictable交互
     void readHistoryList();
 
-    void readMusicList( const QString &playListName);
+    // void readMusicList( const QString &playListName);
 private:
     void initConnect();
     QMediaPlayer *player;
@@ -79,14 +82,19 @@ private:
     void loadLocalMusic(const QString &url, const QString &playListName);
     bool isUrlInDatabase(DataBase *db, const QString &url, const QString &playListName);
 
-signals:
-    void mediaListChanged();
+    void insertItemToMusicTableFromNewDir(const QString &url, const QString &dir);
 
+signals:
+    void mediaListAdd();
+    void mediaListSub(const QString &dir);
+signals:
+    void musicToMusictable(const MetaData & music);
 signals:
     void mediaStatusChanged(QMediaPlayer::MediaStatus status);
 
 signals:
     void stateChanged(QMediaPlayer::State newState);
+
 
 signals:
     void historyListChange(HistoryMData& item);

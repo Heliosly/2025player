@@ -11,6 +11,7 @@
         "qkeysequence": "cpp",
         "qaction": "cpp",
         "qpushbutton": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "qstringlist": "cpp"
     }
 }

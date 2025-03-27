@@ -32,8 +32,8 @@ NavWidget::NavWidget()
     AddItems(QIcon(":asset/image/video2.png"),"Video");
     AddItems(QIcon(":asset/image/video2.png"),"Play History");
    // ListView1->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+    ListView1=new DListView(this);
     ListView1->setModel(model);
-
     VLayoutLeft->addSpacing(5);
     VLayoutLeft->addWidget(label1);
     VLayoutLeft->addSpacing(10);

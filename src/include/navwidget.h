@@ -10,7 +10,7 @@ class NavWidget : public QFrame
     Q_OBJECT
 public:
     NavWidget();
-    DListView *ListView1=new DListView();
+    DListView *ListView1;
 
 private:
     void LoadStyleSheet(QString url);

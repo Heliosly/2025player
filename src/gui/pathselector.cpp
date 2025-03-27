@@ -26,6 +26,7 @@ PathSelector::PathSelector(QWidget *parent)
     pathButton->setMenu(menu);
     mainLayout->addWidget(pathButton);
 
+
     // 每次点击按钮前刷新菜单
     connect(pathButton, &DPushButton::clicked, this, &PathSelector::updateMenu);
     connect(this, &PathSelector::pathSelected, 
@@ -45,7 +46,7 @@ void PathSelector::initUpdateMenu()
     // 遍历每个路径，创建自定义菜单项a
     for (const QString &path :SettingsManager::instance()->paths) {
        //以这种方式加载路径
-        MusicPlayer::instance().initMusicByFilePath(path);
+        MusicPlayer::instance().initMusicByDir(path);
         QWidget *itemWidget = new QWidget;
         QHBoxLayout *itemLayout = new QHBoxLayout(itemWidget);
         itemLayout->setContentsMargins(8, 4, 8, 4);
@@ -76,7 +77,6 @@ void PathSelector::initUpdateMenu()
         });
     }
 
-    MusicPlayer::instance().readMusicList("locallist");
     // 分隔线
     menu->addSeparator();
 

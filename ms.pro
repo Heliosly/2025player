@@ -51,5 +51,7 @@ release{
 DESTDIR = build/release/
 }
 
+MOC_DIR+=$$DESTDIR/moc
+RCC_DIR+=$$DESTDIR/rcc
 
 
