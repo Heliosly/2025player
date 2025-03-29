@@ -199,10 +199,9 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
         // 处理 m4a 文件
         TagLib::MP4::File *mp4File = new TagLib::MP4::File(QFile::encodeName(url).constData());
         if (!mp4File->isOpen()) {
-            covpix.load(":/asset/image/logo.png");
+            covpix.load(":/asset/image/unknowcovpix.jpg");
             return;
         }
-
         title = QString(mp4File->tag()->title().toCString(true));
         artist = QString(mp4File->tag()->artist().toCString(true));
         album = QString(mp4File->tag()->album().toCString(true));
@@ -300,7 +299,7 @@ void MusicPlayer::loadLocalMusic(const QString &url,const QString &dir) {
         // 处理 m4a 文件
         TagLib::MP4::File *mp4File = new TagLib::MP4::File(QFile::encodeName(url).constData());
         if (!mp4File->isOpen()) {
-            covpix.load(":/asset/image/logo.png");
+            covpix.load(":/asset/image/unknowcovpix.jpg");
             return;
         }
 
@@ -321,14 +320,14 @@ void MusicPlayer::loadLocalMusic(const QString &url,const QString &dir) {
         if (!covpix.isNull()) {
             // qDebug() << "读取M4A封面信息成功";
         } else {
-            covpix.load(":/asset/image/logo.png");
+            covpix.load(":/asset/image/unknowcovpix.jpg");
             // qDebug() << "读取音乐封面信息失败";
         }
     } else if (fileExtension == "mp3") {
         // 处理 mp3 文件
         TagLib::MPEG::File *mpegFile = new TagLib::MPEG::File(QFile::encodeName(url).constData());
         if (!mpegFile->isOpen()) {
-            covpix.load(":/asset/image/logo.png");
+            covpix.load(":/asset/image/unknowcovpix.jpg");
             return;
         } else {
             title = QString(mpegFile->tag()->title().toCString(true));
@@ -350,7 +349,7 @@ void MusicPlayer::loadLocalMusic(const QString &url,const QString &dir) {
                     }
                 }
             } else {
-                covpix.load(":/asset/image/logo.png");
+                covpix.load(":/asset/image/unknowcovpix.jpg");
                 qDebug() << "读取音乐封面信息失败";
             }
 
