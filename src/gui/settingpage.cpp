@@ -1,18 +1,6 @@
-/**
- * @brief Sets up the user interface for the settings page
- * 
- * This function initializes and arranges the UI elements for the shortcut settings page:
- * - Creates a title label for the shortcut settings
- * - Creates QKeySequenceEdit widgets for each action to capture keyboard shortcuts
- * - Adds save and reset buttons
- * - Connects button signals to their respective slots
- * 
- * The UI elements are arranged vertically using a QVBoxLayout.
- * Each shortcut editor is stored in the shortcutEditors map with its action name as the key.
- */
 #include "settingpage.h"
 #include <QSettings>
-#include <QMessageBox>
+#include <DMessageBox>
 #include"shortcutmanager.h"
 SettingPage::SettingPage(QWidget *parent) : QFrame(parent) {
     setupUI();
@@ -95,7 +83,7 @@ void SettingPage::saveShortcuts() {
     }
 
     SettingsManager::instance()->saveSettingsShortcutsMap(shortcuts);
-    QMessageBox::information(this, "保存成功", "快捷键已成功保存并生效！");
+    DMessageBox::information(this, "保存成功", "快捷键已成功保存并生效！");
 }
 
 

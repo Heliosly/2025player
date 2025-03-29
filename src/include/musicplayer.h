@@ -8,6 +8,7 @@
 #include <QWidget>
 #include <QVector>
 
+
 class HistoryList :public QObject
 {
 
@@ -65,6 +66,7 @@ public:
     void setVolume(int volume);
     void setPosition(qint64 position);
     qint64 duration();
+    void setSpeed(int speed);
 
 //nh
 
@@ -74,6 +76,7 @@ public:
     // void readMusicList( const QString &playListName);
 private:
     void initConnect();
+
     QMediaPlayer *player;
     const QString locallist = "locallist";
     const QString historylist = "historylist";

@@ -28,7 +28,9 @@ MusicPlayer::MusicPlayer()
 }
 void MusicPlayer::play(const QString& url){
     if(QFile::exists(url)){
+        player->stop();
         player->setMedia(QUrl::fromLocalFile(url));
+        player->play();
     }
     else{
         DataBase::instance()->deleteByUrl(QStringList{url},locallist);
@@ -447,7 +449,6 @@ void MusicPlayer::onMediaChange(QMediaPlayer::MediaStatus state){
                                  player->metaData(QStringLiteral("Title")).toString(), player->duration()/1000))
                 ;
         emit historyListChange(history.history.first());
-        play();
     }
 
 

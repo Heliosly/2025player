@@ -1,4 +1,5 @@
 #include <QFileIconProvider>
+#include"videoplayer.h"
 #include "pathselector.h"
 #include "musictable.h"
 #include "settingsmanager.h"
@@ -18,7 +19,7 @@
 MusicTable::MusicTable()
 {
     this->setObjectName("localmusic");
-    LoadStyleSheet();
+   // LoadStyleSheet();
     localMusicLayout();
     initSource();
     initItem();
@@ -37,6 +38,8 @@ MusicTable::MusicTable()
             this, &MusicTable::addMusic, Qt::QueuedConnection);
     connect(&MusicPlayer::instance(),&MusicPlayer::mediaListSub,this,&MusicTable::deleteByDir,Qt::QueuedConnection);
     connect(music_table,&DListView::doubleClicked,this,&MusicTable::onLocalListItemDoubleClicked);
+
+    connect(video_table,&DListView::doubleClicked,this,&MusicTable::videoplay);
     connect(this,&MusicTable::toResizeWidget,this,&MusicTable::onResetWindowSize);
 
 }
@@ -243,6 +246,7 @@ void MusicTable::loadVideoTable()
             }
 
             QStandardItem *item = new QStandardItem(icon, fileInfo.fileName());
+            item->setData(fileInfo.absoluteFilePath(),Qt::UserRole+1);
 
             videoListModel->appendRow(item);
         }
@@ -340,7 +344,7 @@ void MusicTable::initLayout()
     music_table->setBackgroundRole(QPalette::NoRole);
     music_table->setSpacing(10);
 }
-void MusicTable::playFromListView(int index){
+void MusicTable::playMusicFromIndex(int index){
     QModelIndex Index = musicListModel->index(index, 0);
     MusicPlayer::instance().play( Index.data(Qt::UserRole + 5).toString());
 
@@ -501,12 +505,13 @@ void MusicTable::resetVideoTable()
     clearVideoTable();
     loadVideoTable();
 }
+
 void HistoryTable::mouseDoubleClickEvent(QMouseEvent *event)
 {
 
-    this->play();
+    this->musicPlay();
 }
-void HistoryTable::play()
+void HistoryTable::musicPlay()
 {
     MusicPlayer::instance().play(url);
 }
@@ -583,4 +588,20 @@ void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
     painter->drawText(rectDataC, Qt::AlignCenter, dataC);
 
     painter->restore();
+}
+
+void MusicTable::videoplay(const QModelIndex &index ){
+
+ QStandardItem *item = videoListModel->itemFromIndex(index);
+    QString url =item->data(Qt::UserRole + 1).toString();
+
+
+    VideoPlayer::instance()->play(url);
+    emit videoPlaying();
+}
+
+void MusicTable::playVideoFromIndex(int index){
+    QModelIndex Index = videoListModel->index(index, 0);
+    VideoPlayer::instance()->play( Index.data(Qt::UserRole + 1).toString());
+
 }

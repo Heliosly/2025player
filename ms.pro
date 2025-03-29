@@ -3,6 +3,10 @@ QT += multimedia
 QT += sql
 INCLUDEPATH += /usr/include/taglib 
 
+INCLUDEPATH += /usr/include/x86_64-linux-gnu/qt5/QtAV
+LIBS += -L/usr/lib/x86_64-linux-gnu/qt5/qml/QtAV -lQtAV
+
+
 LIBS += -L/usr/lib -ltag
 
 
@@ -26,7 +30,8 @@ src/play/database.cpp\
     src/gui/settingsmanager.cpp \
     src/gui/pathselector.cpp\
     src/gui/shortcutmanager.cpp\
-src/gui/settingpage.cpp
+src/gui/settingpage.cpp \
+    src/play/videoplayer.cpp
 
 RESOURCES += resources.qrc
 INCLUDEPATH += $$PWD/src/include
@@ -41,7 +46,8 @@ src/include/database.h \
     src/include/settingsmanager.h \
     src/include/shortcutmanager.h\
     src/include/pathselector.h\
-src/include/settingpage.h
+src/include/settingpage.h \
+    src/include/videoplayer.h
 DISTFILES +=
 
 debug{

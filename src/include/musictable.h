@@ -17,6 +17,7 @@
 #include<QItemDelegate>
 #include<QListWidget>
 #include<DLineEdit>
+#include<DMainWindow>
 #include<QStackedWidget>
  DWIDGET_USE_NAMESPACE
  class CustomListView;  
@@ -37,6 +38,7 @@
      QMap<QString,QList<int>> dirToIndex;
      DListView *music_table;
      DListView *video_table;
+     DMainWindow*window;
 
 
      DListView *historyTable;
@@ -62,8 +64,11 @@
 
      void onResetWindowSize(int width);
 ///Controlbar的上一曲下一曲会经过这里
-  void playFromListView(int index);
- public slots:
+  void playMusicFromIndex(int index);
+  void playVideoFromIndex(int index);
+  void playMediaFromIndexInHistory(int index);
+ public slots:;
+
  void   onLocalListItemDoubleClicked(const QModelIndex &index );
          void setTheme(DGuiApplicationHelper::ColorType);
          void clearMusicTable();
@@ -72,6 +77,7 @@
          void loadHistoryTable();
          void resetMusicTable();
          void resetVideoTable();
+         void videoplay(const QModelIndex &index );
 
        void addMusic(const MetaData& music);
          void onHistoryListRemove(int index);
@@ -93,6 +99,7 @@
 
     signals:
     void toResizeWidget(int width);
+    void videoPlaying();
  };
 
  ///调整Dlistview项间距
@@ -115,6 +122,6 @@ public:
     int number;
     void mouseDoubleClickEvent(QMouseEvent *event);
 
-    void play();
+    void musicPlay();
 };
 #endif // MEDIATABLE_H

@@ -12,6 +12,7 @@
         "qaction": "cpp",
         "qpushbutton": "cpp",
         "chrono": "cpp",
-        "qstringlist": "cpp"
+        "qstringlist": "cpp",
+        "qvboxlayout": "cpp"
     }
 }

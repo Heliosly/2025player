@@ -9,8 +9,7 @@
                 "/usr/include/dtk5",
                 "/usr/include/dtk5/**",
                 "/usr/include/taglib/**",
-                "/usr/include/dtk5/DWidget"
-            ],
+                "/usr/include/dtk5/DWidget"           ],
             "defines": [
                 "QT_CORE_LIB",
                 "QT_GUI_LIB",

@@ -16,7 +16,9 @@ class MainWindow : public DMainWindow
     Q_OBJECT
 public:
     MainWindow();
+    void closeVideoPage();
     ~MainWindow();
+
 private:
     QWidget *cw = new QWidget(this);
     NavWidget *Navw = new  NavWidget;
@@ -39,6 +41,7 @@ private:
 public slots:
     void setTheme(DGuiApplicationHelper::ColorType);
     void currentchange(const QModelIndex &current,const QModelIndex &previous);
+    void showVideoPage();
     protected:
     void resizeEvent(QResizeEvent *event) override;
     /// 程序退出时调用
