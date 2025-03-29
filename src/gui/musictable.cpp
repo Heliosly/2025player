@@ -550,7 +550,7 @@ void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
     if (option.state & QStyle::State_Selected) {
         QPainterPath path;
         path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18); // 向内缩进 2px，圆角半径 18px
-        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setRenderHint(QPainter::Antialiasing,QPainter::SmoothPixmapTransform);
         painter->setPen(Qt::NoPen);
         painter->setBrush(option.palette.highlight());
         painter->drawPath(path);
