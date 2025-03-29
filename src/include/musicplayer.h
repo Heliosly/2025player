@@ -101,7 +101,7 @@ signals:
 signals:
     void historyListRemove(int index);
 public slots:
-    void play(QString url);
+    void play(const QString& url);
 
     /// 负责向数据库上传路径并发送信号给musictable使其更新页面;
     void installPath(const QString &filePath);

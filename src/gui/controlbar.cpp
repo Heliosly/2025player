@@ -33,7 +33,7 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
     volumeSlider->setMaximumWidth(120);
 
     volumeSlider->setIconSize(QSize(22,22));
-     btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+    btplay->setIcon(QIcon(":/asset/image/play.PNG"));
     btplay->setIconSize(QSize(24,24));
     btplay->setFixedSize(QSize(36,36));
     btplay->setObjectName("bt_play");
@@ -55,10 +55,10 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
     btnex->setObjectName("bt_next");
 
 
-//    btvolume->setIcon(QIcon(":/asset/image/fvolume.PNG"));
-//    btvolume->setIconSize(QSize(18, 18));
-//    btvolume->setObjectName("bt_volume");
-//    btvolume->setStyleSheet("#bt_volume{ background-color: transparent;}");
+    //    btvolume->setIcon(QIcon(":/asset/image/fvolume.PNG"));
+    //    btvolume->setIconSize(QSize(18, 18));
+    //    btvolume->setObjectName("bt_volume");
+    //    btvolume->setStyleSheet("#bt_volume{ background-color: transparent;}");
     btscreen->setIcon(QIcon(":/asset/image/fscreen.PNG"));
     btscreen->setIconSize(QSize(24, 24));
     btscreen->setObjectName("bt_screen");
@@ -70,20 +70,20 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
 
     btloop->setIconSize(QSize(36, 36));
 
-   btloop->setObjectName("bt_loop");
-   btloop->setFixedSize(QSize(36,36));
-   this->ChangeLoopBtIcon();
-//    QString styleSheet = "#bt_play:hover, #bt_pre:hover, #bt_stop:hover, #bt_next:hover, #bt_volume:hover, #bt_screen:hover { background-color: #f1f1f1; }"
-//                             "#bt_play:active, #bt_pre:active, #bt_stop:active, #bt_next:active, #bt_volume:active, #bt_screen:active { background-color: #ccc; }"
-//                             "#bt_play, #bt_pre, #bt_stop, #bt_next, #bt_volume, #bt_screen { background-color: transparent; }";
+    btloop->setObjectName("bt_loop");
+    btloop->setFixedSize(QSize(36,36));
+    this->ChangeLoopBtIcon();
+    //    QString styleSheet = "#bt_play:hover, #bt_pre:hover, #bt_stop:hover, #bt_next:hover, #bt_volume:hover, #bt_screen:hover { background-color: #f1f1f1; }"
+    //                             "#bt_play:active, #bt_pre:active, #bt_stop:active, #bt_next:active, #bt_volume:active, #bt_screen:active { background-color: #ccc; }"
+    //                             "#bt_play, #bt_pre, #bt_stop, #bt_next, #bt_volume, #bt_screen { background-color: transparent; }";
 
-//        // 应用样式到所有按钮
-//        btplay->setStyleSheet(styleSheet);
-//        btpre->setStyleSheet(styleSheet);
-//        btstop->setStyleSheet(styleSheet);
-//        btnex->setStyleSheet(styleSheet);
-//        btvolume->setStyleSheet(styleSheet);
-//        btscreen->setStyleSheet(styleSheet);
+    //        // 应用样式到所有按钮
+    //        btplay->setStyleSheet(styleSheet);
+    //        btpre->setStyleSheet(styleSheet);
+    //        btstop->setStyleSheet(styleSheet);
+    //        btnex->setStyleSheet(styleSheet);
+    //        btvolume->setStyleSheet(styleSheet);
+    //        btscreen->setStyleSheet(styleSheet);
 
     playtime ->setText("--.--");
     endtime->setText("--.--");
@@ -125,7 +125,7 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
     connect(btloop,&DIconButton::clicked,this,&ControlBar::onLoopChange);
     LoadStyleSheet();
 
-//    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QMediaPlayer::setVolume);
+    //    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QMediaPlayer::setVolume);
 }
 ///读取设置之前的音量设置(todo
 void ControlBar::readVolume(const QString &filePath){
@@ -152,50 +152,50 @@ void ControlBar::LoadStyleSheet()
 }
 ///计算分秒
 QString formatTime(int timeInSeconds) {
-        if (timeInSeconds == 0) {
-            return "00.00";
-        } int minutes = timeInSeconds / 60;
-          int seconds = timeInSeconds % 60;
-          QString a;
-          if(minutes>=10){
-              a+=QString("%1").arg(minutes);
-            }
-            else {
-              a+=QString("0%1").arg(minutes);
-
-          }
-          a+=".";
-          if(seconds>=10){
-            a+=QString("%1").arg(seconds);
-          }
-          else{
-            a+=QString("0%1").arg(seconds);
-          }
-          return a;
+    if (timeInSeconds == 0) {
+        return "00.00";
+    } int minutes = timeInSeconds / 60;
+    int seconds = timeInSeconds % 60;
+    QString a;
+    if(minutes>=10){
+        a+=QString("%1").arg(minutes);
     }
+    else {
+        a+=QString("0%1").arg(minutes);
+
+    }
+    a+=".";
+    if(seconds>=10){
+        a+=QString("%1").arg(seconds);
+    }
+    else{
+        a+=QString("0%1").arg(seconds);
+    }
+    return a;
+}
 
 void ControlBar::stchange(QMediaPlayer::State state){
     if(state==QMediaPlayer::StoppedState){
-         btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-         currenttime=0;
+        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        currenttime=0;
 
-         playtime ->setText("--.--");
-         endtime->setText("--.--");
-         cTimer->stop();
-         processSlider->setValue(0);
+        playtime ->setText("--.--");
+        endtime->setText("--.--");
+        cTimer->stop();
+        processSlider->setValue(0);
     }
     else if(state==QMediaPlayer::PlayingState){
-         btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
-         if(currenttime){
-             cTimer->start();
+        btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
+        if(currenttime){
+            cTimer->start();
 
-         }
+        }
 
 
     }
     else{
-         btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-         cTimer->stop();
+        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        cTimer->stop();
     }
 }
 void ControlBar::playslot(){
@@ -210,26 +210,29 @@ void ControlBar::playslot(){
     }
 }
 void ControlBar::preslot(){
-  int index = temp->music_table->currentRow();
-  if (index>0){
-    temp->playFromListView(index-1);
-}
+    QModelIndex currentIndex = temp->music_table->currentIndex();
+    int index = currentIndex.row();
+    if (index>0){
+        temp->playFromListView(index-1);
+    }
 }
 void ControlBar::stopslot(){
-     mediaPlayer->stop();
+    mediaPlayer->stop();
 
 
 }
 void ControlBar::nexslot()
 {
-    int index = temp->music_table->currentRow();
+    QModelIndex currentIndex = temp->music_table->currentIndex();
+    int index = currentIndex.row();
+
     if (index<temp->music_table->count()){
-               temp->playFromListView(index+1);
+        temp->playFromListView(index+1);
 
     }
 
     else {
-     temp->playFromListView(0);
+        temp->playFromListView(0);
     }
 }
 
@@ -237,18 +240,18 @@ void ControlBar::nexslot()
 void ControlBar::onLoopChange(){
 
     switch (loopstate) {
-            case LoopState::Loop:
-                loopstate = LoopState::Random;  // 如果是 Loop，改成 Random
-                break;
+    case LoopState::Loop:
+        loopstate = LoopState::Random;  // 如果是 Loop，改成 Random
+        break;
 
-            case LoopState::Random:
-                loopstate = LoopState::Queue;  // 如果是 Random，改成 Queue
-                break;
+    case LoopState::Random:
+        loopstate = LoopState::Queue;  // 如果是 Random，改成 Queue
+        break;
 
-            case LoopState::Queue:
-                loopstate = LoopState::Loop;   // 如果是 Queue，改成 Loop
-                break;
-           }
+    case LoopState::Queue:
+        loopstate = LoopState::Loop;   // 如果是 Queue，改成 Loop
+        break;
+    }
 
     this->ChangeLoopBtIcon();
 }
@@ -256,32 +259,32 @@ void ControlBar::onLoopChange(){
 void ControlBar::ChangeLoopBtIcon(){
 
     switch (loopstate) {
-            case LoopState::Loop:
-                             btloop->setIcon(QIcon(":/asset/image/loop.png"));
-                               break;
+    case LoopState::Loop:
+        btloop->setIcon(QIcon(":/asset/image/loop.png"));
+        break;
 
-            case LoopState::Random:
+    case LoopState::Random:
 
-                             btloop->setIcon(QIcon(":/asset/image/shuffle.png"));
-                               break;
+        btloop->setIcon(QIcon(":/asset/image/shuffle.png"));
+        break;
 
-            case LoopState::Queue:
-  btloop->setIcon(QIcon(":/asset/image/queue.png"));
+    case LoopState::Queue:
+        btloop->setIcon(QIcon(":/asset/image/queue.png"));
 
-                              break;
+        break;
 
-            default:
-            qDebug()<<"trap in ChangeLoopBtIcon";
-                               break;
-        }
+    default:
+        qDebug()<<"trap in ChangeLoopBtIcon";
+        break;
     }
+}
 
 void ControlBar::handleTimeout(){
-     currenttime+=1;
+    currenttime+=1;
 
-     playtime ->setText(formatTime(currenttime));
-     if(processSlider->value()!=currenttime)
-     processSlider->setValue(currenttime);
+    playtime ->setText(formatTime(currenttime));
+    if(processSlider->value()!=currenttime)
+        processSlider->setValue(currenttime);
 
 }
 void ControlBar::PlaySliderValueReset(){
@@ -297,10 +300,10 @@ void ControlBar::PlaySliderValueReset(){
 void ControlBar::mediachange(QMediaPlayer::MediaStatus state){
     ///换媒体文件
     if (state==QMediaPlayer::MediaStatus::LoadedMedia)
-      {
+    {
         PlaySliderValueReset();
         endtime->setText(QString(formatTime(mediaPlayer->duration()/1000+1)));
-    processSlider->setMaximum(mediaPlayer->duration()/1000+1);
+        processSlider->setMaximum(mediaPlayer->duration()/1000+1);
 
 
     }
@@ -315,10 +318,11 @@ void ControlBar::mediachange(QMediaPlayer::MediaStatus state){
             nexslot();
         }
         else{
-            int index = temp->music_table->currentRow();
-                        int randomNumber = QRandomGenerator::global()->bounded(0, index);
-                         if (index<temp->music_table->count()){
-                       temp->playFromListView(randomNumber);
+            QModelIndex currentIndex = temp->music_table->currentIndex();
+            int index = currentIndex.row();
+            int randomNumber = QRandomGenerator::global()->bounded(0, index);
+            if (index<temp->music_table->count()){
+                temp->playFromListView(randomNumber);
 
             }
 
@@ -352,11 +356,11 @@ void ControlBar::switchvolume() {
 }
 
 void ControlBar::handlePlay() {
-   playslot(); 
+    playslot();
 }
 
 void ControlBar::handleChangeLoop() {
-   onLoopChange(); 
+    onLoopChange();
 }
 
 void ControlBar::handleNext() {

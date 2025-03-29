@@ -26,7 +26,7 @@ MusicPlayer::MusicPlayer()
     initConnect();
 
 }
-void MusicPlayer::play(QString url){
+void MusicPlayer::play(const QString& url){
     if(QFile::exists(url)){
         player->setMedia(QUrl::fromLocalFile(url));
     }
@@ -192,7 +192,7 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
     QString artist;
     QString album;
 
-    int duration;
+    int duration=-1;
     QPixmap covpix = QPixmap();
 
     if (fileExtension == "m4a") {
@@ -216,13 +216,13 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
 
         covpix.loadFromData(reinterpret_cast<const uchar*>(albumArt.data().data()), albumArt.data().size());
         if (covpix.isNull()) {
-            covpix.load(":/asset/image/logo.png");
+            covpix.load("::/asset/image/unknowcovpix.jpg");
         }
     } else if (fileExtension == "mp3") {
         // 处理 mp3 文件
         TagLib::MPEG::File *mpegFile = new TagLib::MPEG::File(QFile::encodeName(url).constData());
         if (!mpegFile->isOpen()) {
-            covpix.load(":/asset/image/logo.png");
+            covpix.load(":/asset/image/unknowcovpix.jpg");
             return;
         } else {
             title = QString(mpegFile->tag()->title().toCString(true));
@@ -240,11 +240,11 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
                     QByteArray coverData(reinterpret_cast<const char *>(pic->picture().data()), pic->picture().size());
 
                     if (!covpix.loadFromData(coverData)) {
-                        covpix.load(":/asset/image/logo.png");
+                        covpix.load(":/asset/image/unknowcovpix.jpg");
                     }
                 }
             } else {
-                covpix.load(":/asset/image/logo.png");
+                covpix.load(":/asset/image/unknowcovpix.jpg");
             }
         }
     }
@@ -254,7 +254,10 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
                         ;
         title = fileInfo.baseName()
                         ;    }
-    QMap<QString, QString> metaDataMap;
+    if (duration==-1){
+        duration=0;
+    }
+      QMap<QString, QString> metaDataMap;
     metaDataMap.insert("dirpath", dir);
     metaDataMap.insert("filepath", url);
     metaDataMap.insert("title", title);
@@ -265,8 +268,6 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
     if (!DataBase::instance()->saveMetaData(metaDataMap, covpix, 0)) {
         qDebug() << "Error: Failed to save metadata to database";
         return;
-    } else {
-        qDebug() << "Metadata saved successfully";
     }
 
     // Create a Meta object using the metaDataMap
@@ -277,11 +278,9 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
     meta.album = metaDataMap.value("album");
     meta.duration = metaDataMap.value("duration").toInt();
     meta.covpix = covpix;
-    qDebug() << "Emitting signal musicToMusictable with meta:" << meta.title;
     emit musicToMusictable(meta);
 
 
-    qDebug() << "Meta object created: " << meta.title << meta.artist << meta.album;
 }
 ///将本地元信息传至数据库
 void MusicPlayer::loadLocalMusic(const QString &url,const QString &dir) {

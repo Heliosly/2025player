@@ -36,13 +36,31 @@ MusicTable::MusicTable()
     connect(&MusicPlayer::instance(), &MusicPlayer::musicToMusictable,
             this, &MusicTable::addMusic, Qt::QueuedConnection);
     connect(&MusicPlayer::instance(),&MusicPlayer::mediaListSub,this,&MusicTable::deleteByDir,Qt::QueuedConnection);
+    connect(music_table,&DListView::doubleClicked,this,&MusicTable::onLocalListItemDoubleClicked);
+    connect(this,&MusicTable::toResizeWidget,this,&MusicTable::onResetWindowSize);
 
 }
 void MusicTable::deleteByDir(const QString &dir){
     auto &dirIndex=dirToIndex[dir];
-      for (auto it = dirIndex.rbegin(); it != dirIndex.rend(); ++it) {
-        QListWidgetItem *item = music_table->takeItem(*it);
-           delete item;  // 释放内存
+    int n=dirIndex.size();
+    if(dirIndex.empty()){
+        qWarning()<<"[MusicTable::deleteByDir]dirIndex is empty";
+        return;
+    }
+
+    int end=*dirIndex.rbegin();
+    for (auto row  = dirIndex.rbegin(); row != dirIndex.rend(); ++row) {
+        QStandardItem *item = musicListModel->takeItem(*row);  // 从模型中取出项
+        if (item) {
+            delete item;  // 释放内存
+        }
+        musicListModel->removeRow(*row);
+    }
+    for(auto &j:dirToIndex){
+        for(auto &i:j)
+            if(i>end){
+                i-=n;
+            }
     }
     dirToIndex.remove(dir);
 }
@@ -62,11 +80,11 @@ void MusicTable::loadMoreData()
         qDebug() << "No more data to load maybe load all data";
         return;
     }
-   
-    
+
+
 
     for (const MetaData &music : dataList) {
-        
+
         addMusic(music);
     }
 
@@ -86,7 +104,7 @@ void MusicTable::setLoadParameters(int initialHint, int loadCount)
 {
     m_currentHint = initialHint;
     m_loadCount = loadCount;
-    
+
 }
 void MusicTable::setMusicCount(int value)
 {
@@ -94,34 +112,41 @@ void MusicTable::setMusicCount(int value)
     m_totalRows=value;
 }
 void MusicTable::initSource(){
-      pathSelector = new PathSelector(this);
+    pathSelector = new PathSelector(this);
 
 }
 void MusicTable::initItem()
 {
 
     m_loading=0;
-    music_table = new QListWidget(this);
+    music_table = new DListView(this);
+    musicListModel = new QStandardItemModel();
+    music_table->setModel(musicListModel);
+    TableItemDelegate *delegate = new TableItemDelegate(music_table);
+    music_table->setItemDelegate(delegate);
 
     setMusicCount
-(DataBase::instance()->getListCount("locallist"));
-   setLoadParameters(0, 50); // 每次加载 50 行
+                    (DataBase::instance()->getListCount("locallist"));
+    setLoadParameters(0, 50); // 每次加载 50 行
     music_table->setObjectName("table_music");
     QList<QString> tableList; //
     // QStandardItemModel* headmodel = new QStandardItemModel;
-    music_table->setSortingEnabled(false);
 
     tableList << "#" << "音乐标题" << "专辑" << "时长";
-    music_table->setIconSize(QSize(50, 50));
+    music_table->setIconSize(QSize(60, 60));
+    music_table->setUniformItemSizes(true);  // 启用统一 item 大小
+    music_table->setGridSize(QSize(music_table->width(),80 ));
+    music_table->setSpacing(20);
 
-    // 打开右键菜单属性
-    music_table->setContextMenuPolicy(Qt::CustomContextMenu);
+
+
+    music_table->setBackgroundType(DStyledItemDelegate::BackgroundType::NoBackground);
 
     music_table->setAlternatingRowColors(false);
     // 设置表格内容不可编辑
     music_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     // 设置为行选择
-    music_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    //    music_table->setSelectionBehavior(QAbstractItemView::SelectRows);
     // 设置最后一栏自适应长度
     //     title_table->horizontalHeader()->setStretchLastSection(true);
     // 删除网格表
@@ -181,13 +206,13 @@ void MusicTable::initItem()
 
 void MusicTable::loadHistoryTable() {
     auto &history = MusicPlayer::instance().history;
-    historyListModel->clear();  
-    
+    historyListModel->clear();
+
     for(const auto &item : history.history) {
         QStandardItem *newItem = new QStandardItem(QIcon(":/asset/image/video2.PNG"), item.title);
         historyListModel->appendRow(newItem);
     }
-   
+
 }
 
 void MusicTable::onHistoryListRemove(int index){
@@ -196,10 +221,10 @@ void MusicTable::onHistoryListRemove(int index){
 // 添加新的历史记录项目
 void MusicTable::addHistoryItem(const HistoryMData& item) {
     QStandardItem *newItem = new QStandardItem(QIcon(":/asset/image/video2.PNG"), item.title);
-   
+
     historyListModel->insertRow(0, newItem);
 
-   
+
 }
 void MusicTable::loadVideoTable()
 {
@@ -236,7 +261,7 @@ void MusicTable::loadVideoTable()
 }
 void MusicTable::clearMusicTable()
 {
-    music_table->clear();
+    musicListModel->clear();
     listDlistView.clear();
 }
 void MusicTable::clearVideoTable()
@@ -286,7 +311,7 @@ void MusicTable::initLayout()
     button_HBoxLayout->addWidget(playAll);
     // 右边存储搜索栏和selectdir的布局
 
-      QVBoxLayout *right_VBoxLayout = new QVBoxLayout();
+    QVBoxLayout *right_VBoxLayout = new QVBoxLayout();
 
     right_VBoxLayout->addWidget(searchEdit);
     right_VBoxLayout->addWidget(pathSelector);
@@ -315,159 +340,107 @@ void MusicTable::initLayout()
     music_table->setBackgroundRole(QPalette::NoRole);
     music_table->setSpacing(10);
 }
+void MusicTable::playFromListView(int index){
+    QModelIndex Index = musicListModel->index(index, 0);
+    MusicPlayer::instance().play( Index.data(Qt::UserRole + 5).toString());
 
+
+}
 void MusicTable::addMusic(const MetaData &music)
 {
 
     int minutes = music.duration / 60;
     int seconds = music.duration % 60;
-    QPixmap roundedPixmap(music.covpix.size());
-    roundedPixmap.fill(Qt::transparent); // 设置透明背景
 
-    // 绘制圆角矩形
+
+    QPixmap sourcePixmap;
+
+    // 检查原始图像是否有效
+    if (music.covpix.isNull()) {
+        qWarning() << "Cover image is null, using placeholder";
+        sourcePixmap = QPixmap(":/asset/image/unknowcovpix.jpg");
+    } else {
+        sourcePixmap = music.covpix;
+    }
+    int margin = 10;
+    int imageSize = 60;
+    // 生成目标 pixmap 尺寸：图片区域加上 margin
+    QPixmap roundedPixmap(imageSize + 2 * margin, imageSize + 2 * margin);
+    roundedPixmap.fill(Qt::transparent);
+
     QPainter painter(&roundedPixmap);
-    painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
-    painter.setBrush(QBrush(music.covpix));
-    painter.setPen(Qt::NoPen);                                                            // 不需要边框
-    painter.drawRoundedRect(0, 0, music.covpix.width(), music.covpix.height(), 100, 100); // 绘制圆角矩形
-    painter.end();
+    painter.setRenderHint(QPainter::Antialiasing);
 
+    // 目标区域，即中间区域
+    QRect targetRect(margin, margin, imageSize, imageSize);
+
+    // 可选：如果 sourcePixmap 尺寸不合适，进行缩放，保持平滑和宽高比
+    QPixmap scaledPixmap = sourcePixmap.scaled(imageSize, imageSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+    // 设置剪裁区域为圆角矩形
+    QPainterPath path;
+    path.addRoundedRect(targetRect, 22, 22);  // 圆角半径设为18，可根据需要调整
+    painter.setClipPath(path);
+
+    painter.drawPixmap(targetRect, scaledPixmap);
+    painter.end();
     int row = music_table->count();
 
     // music_Table->setRowHeight(row,200);
     //  设置每列的值;
     //  设置第一列（序号）
-    QString rowNumber = (row + 1 >= 10) ? QString::number(row + 1) : "0" + QString::number(row + 1);
+
 
     QString duration = QString("%1:%2").arg(minutes, 2, 10, QChar('0')).arg(seconds, 2, 10, QChar('0'));
     // 设置第二列（标题）
-    CustomListView *view = new CustomListView();
-    view->tableWidget = this;
-    view->number = row;
-    view->url = music.url;
-    QStandardItemModel *model = new QStandardItemModel(view);
+    DStandardItem *item = new DStandardItem(music.title);
+    item->setIcon(roundedPixmap.scaled(QSize(80, 80), Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-    view->setModel(model);
-    DStandardItem *item0 = new DStandardItem(rowNumber);
-    DStandardItem *item11 = new DStandardItem();
-    item11->setIcon(roundedPixmap.scaled(QSize(50, 50)));
-    DStandardItem *item1 = new DStandardItem(music.title);
 
-    DStandardItem *item2 = new DStandardItem(music.album);
-    DStandardItem *item3 = new DStandardItem(duration);
-    view->setBackgroundType(DStyledItemDelegate::BackgroundType::NoBackground);
-    view->setSelectionMode(QAbstractItemView::NoSelection);
-    view->setIconSize(QSize(50, 50));
-    view->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    item->setData(music.artist,Qt::UserRole+1);
+    item->setData(music.album, Qt::UserRole + 2);
+    item->setData(duration, Qt::UserRole + 3);
+
+    item->setData(music.url,Qt::UserRole+5);
+
+    item->setSizeHint(QSize(0,80));
+
+
     // view->setViewMode(QListView::IconMode);
-    view->setOrientation(QListView::LeftToRight, false);
-    view->setResizeMode(QListView::Adjust);
 
-    view->itemdelegate = new CustomItemDelegate(view);
-    view->setItemDelegate(view->itemdelegate);
     DViewItemAction *act = new DViewItemAction;
 
     act->setText(music.artist);
     act->setFontSize(DFontSizeManager::T8);
     act->setTextColorRole(DPalette::TextTitle);
-    act->setParent(view);
+    act->setParent(music_table);
 
-    item1->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
-    item1->setTextActionList({act});
-    item0->setTextAlignment(Qt::AlignCenter);
-    item11->setTextAlignment(Qt::AlignCenter);
-    item1->setTextAlignment(Qt::AlignCenter);
-    item2->setTextAlignment(Qt::AlignCenter);
-    item3->setTextAlignment(Qt::AlignCenter);
-    item0->setSizeHint(QSize(40, 70));
-    item11->setSizeHint(QSize(90, 70));
-    item1->setSizeHint(QSize(150, 70));
-    item2->setSizeHint(QSize(300, 70));
-    item3->setSizeHint(QSize(100, 70));
-    item0->setEditable(false);
-    item11->setEditable(false);
-    item1->setEditable(false);
-    item2->setEditable(false);
-    item3->setEditable(false);
-    view->addItem(rowNumber);
-    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    model->appendRow(item0);
-    model->appendRow(item11);
-    model->appendRow(item1);
-    model->appendRow(item2);
-    model->appendRow(item3);
+    musicListModel->appendRow(item );
 
-    QListWidgetItem *item02 = new QListWidgetItem(music_table);
 
-    item02->setSizeHint(QSize(70, 70));
 
-    music_table->setItemWidget(item02, view);
-    music_table->addItem(item02);
 
     QFileInfo fileInfo(music.url);
-    QString path = fileInfo.absolutePath();  // 获取目录路径
-         if(!dirToIndex.contains(path)){
+    QString dirpath = fileInfo.absolutePath();  // 获取目录路径
+    if(!dirToIndex.contains(dirpath)){
 
-         dirToIndex[path] = QList<int>();
-         }
-         dirToIndex[path].append(row);
+        dirToIndex[dirpath] = QList<int>();
+    }
+    dirToIndex[dirpath].append(row);
 }
 
 void MusicTable::onBtPlayAll()
 {
 
-    playFromListView(0);
-}
-QString MusicTable::getUrlFromListView(int index)
-{
-    QListWidgetItem *item = music_table->item(index);
-    if (item)
-    {
-
-        QWidget *widget = music_table->itemWidget(item);
-        if (widget)
-        {
-
-            CustomListView *listView = qobject_cast<CustomListView *>(widget);
-            return listView->url;
-        }
+    QStandardItem *firstItem = musicListModel->item(0, 0);
+    if (firstItem) {
+        QString musicUrl = firstItem->data(Qt::UserRole + 5).toString();
+        MusicPlayer::instance().play(musicUrl);
     }
-    qDebug() << "Can't get information from CustomListView[0]";
-    return QString();
-}
+    else qWarning()<<"[MusicTable::onBtPlayAll]:cant get first Item";
 
-void MusicTable::playFromListView(int index)
-{
-    QListWidgetItem *item = music_table->item(index);
-    if (item)
-    {
-
-        QWidget *widget = music_table->itemWidget(item);
-        if (widget)
-        {
-
-            CustomListView *listView = qobject_cast<CustomListView *>(widget);
-
-            listView->play();
-
-            music_table->setCurrentRow(index);
-            return;
-        }
-    }
-    qDebug() << "Can't get information from CustomListView[0]";
-}
-
-void CustomListView::mouseDoubleClickEvent(QMouseEvent *event)
-{
-
-    this->play();
-}
-void CustomListView::play()
-{
-    MusicPlayer::instance().play(url);
-}
-void MusicTable::LoadStyleSheet()
+}void MusicTable::LoadStyleSheet()
 {
     QFile file(":/asset/qss/musictb.qss");
     file.open(QIODevice::ReadOnly);
@@ -496,61 +469,33 @@ void MusicTable::setTheme(DGuiApplicationHelper::ColorType theme)
 }
 void MusicTable::onResetWindowSize(int width)
 {
-    for (int i = 0; i < music_table->count(); ++i) {
-        QListWidgetItem *item = music_table->item(i);
 
-        // 获取与 QListWidgetItem 关联的 widget（即 CustomListView）
-        CustomListView* customListView = qobject_cast<CustomListView*>(music_table->itemWidget(item));
 
-        // 确保 customListView 不为空
-        if (customListView) {
-            customListView->itemdelegate->factor = ((width - 900) * 5 / 18);
-            // qDebug() << "factor:" << customListView->itemdelegate->factor;
-        } else {
-            qWarning() << "Failed to get CustomListView from itemWidget.";
-        }
-    }
+    factor = ((width - 900) * 5 / 18);
 }
 
 void MusicTable::onSearchTextChange(QString text)
 {
-    for (int i = 0; i < music_table->count(); ++i)
-    {
-        bool matchFound = false;
-        QListWidgetItem *item = music_table->item(i);
-        if (item)
-        {
-            QWidget *widget = music_table->itemWidget(item);
-            if (widget)
-            {
-                QListView *listView = qobject_cast<QListView *>(widget);
-                if (listView)
-                {
-                    QModelIndex index = listView->model()->index(3, 0);
-                    QString text1 = listView->model()->data(index).toString();
+    QStandardItemModel *model = qobject_cast<QStandardItemModel *>(music_table);
+    if (!model) return;
 
-                    if (text1.contains(text, Qt::CaseInsensitive))
-                    {
-                        matchFound = true;
-                    }
-                }
-            }
-        }
+    for (int i = 0; i < model->rowCount(); ++i) {
+        QString itemText = model->index(i, 0).data(Qt::DisplayRole).toString();
+
+        bool matchFound = itemText.contains(text, Qt::CaseInsensitive);
         music_table->setRowHidden(i, !matchFound);
     }
 }
 void MusicTable::resetMusicTable()
 {        
-        m_loaded=0;
-        setMusicCount(DataBase::instance()->countLocallist);
+    m_loaded=0;
+    setMusicCount(DataBase::instance()->countLocallist);
+    int width =music_table ->width();
+    width*=1.25;
+    emit toResizeWidget(width);
 
 
-        if (windowsWidth != 0) {
-            QMetaObject::invokeMethod(this, [this]() {
-                onResetWindowSize(windowsWidth);
-            }, Qt::QueuedConnection);
-        }
-  }
+}
 void MusicTable::resetVideoTable()
 {
     clearVideoTable();
@@ -564,4 +509,78 @@ void HistoryTable::mouseDoubleClickEvent(QMouseEvent *event)
 void HistoryTable::play()
 {
     MusicPlayer::instance().play(url);
+}
+
+void MusicTable::onLocalListItemDoubleClicked(const QModelIndex &index ){
+    QStandardItem *item = musicListModel->itemFromIndex(index);
+    QString musicUrl =item->data(Qt::UserRole + 5).toString();
+    MusicPlayer::instance().play(musicUrl);
+}
+
+void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const  {
+
+    // 获取数据：图标、文本及自定义数据
+    QIcon icon = index.data(Qt::DecorationRole).value<QIcon>();
+    QString text = index.data(Qt::DisplayRole).toString();
+    QString dataA = index.data(Qt::UserRole + 1).toString();
+    QString dataB = index.data(Qt::UserRole + 2).toString();
+    QString dataC = index.data(Qt::UserRole + 3).toString();
+    int row = index.row();
+    QString rowNumber = (row + 1 >= 10) ? QString::number(row + 1)
+                                        : "0" + QString::number(row + 1);
+
+    // 定义各列宽度
+    int numColWidth         = 30;
+    int iconColWidth        = 80;
+    int textAndDataAColWidth = 200 + factor;  // 第三列：同时显示 text 和 dataA
+    int dataBColWidth       = 200 + factor;
+    int dataCColWidth       = option.rect.width() - (numColWidth + iconColWidth + textAndDataAColWidth + dataBColWidth);
+
+    // 构造各列区域
+    QRect rectNum(option.rect.x(), option.rect.y(), numColWidth, option.rect.height());
+    QRect rectIcon(rectNum.right() + 20, option.rect.y(), iconColWidth, option.rect.height());
+    QRect rectTextDataA(rectIcon.right() + 1, option.rect.y(), textAndDataAColWidth, option.rect.height());
+    QRect rectDataB(rectTextDataA.right() + 1, option.rect.y(), dataBColWidth, option.rect.height());
+    QRect rectDataC(rectDataB.right() + 1, option.rect.y(), dataCColWidth, option.rect.height());
+
+    // 开始绘制
+    painter->save();
+
+    // 绘制选中背景（带圆角效果）
+    if (option.state & QStyle::State_Selected) {
+        QPainterPath path;
+        path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18); // 向内缩进 2px，圆角半径 18px
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(option.palette.highlight());
+        painter->drawPath(path);
+    }
+
+    painter->drawText(rectNum, Qt::AlignCenter, rowNumber);
+
+    if (!icon.isNull()) {
+        QSize iconSize = rectIcon.size().boundedTo(QSize(80, 80)); // 限制最大尺寸
+        painter->drawPixmap(rectIcon, icon.pixmap(iconSize));
+    }
+
+    QRect rectText = rectTextDataA;
+    rectText.setHeight(rectTextDataA.height() / 2);
+
+    QRect rectDataA = rectTextDataA;
+    rectDataA.setY(rectTextDataA.y() + rectTextDataA.height() / 2);
+    rectDataA.setHeight(rectTextDataA.height() / 2);
+
+
+    painter->setPen(Qt::black);
+    painter->drawText(rectText, Qt::AlignLeft | Qt::AlignBottom, text);
+
+    painter->setPen(QColor(128, 128, 128));  // 灰色
+    painter->drawText(rectDataA, Qt::AlignLeft | Qt::AlignTop, dataA);
+
+    painter->setPen(Qt::black);
+    painter->drawText(rectDataB, Qt::AlignCenter, dataB);
+
+    painter->drawText(rectDataC, Qt::AlignCenter, dataC);
+
+    painter->restore();
 }

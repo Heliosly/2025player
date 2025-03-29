@@ -35,7 +35,7 @@
      void setMusicCount(int value);
 
      QMap<QString,QList<int>> dirToIndex;
-     DListWidget *music_table;
+     DListView *music_table;
      DListView *video_table;
 
 
@@ -50,20 +50,21 @@
      QVector<CustomListView*> listDlistView;
      QFrame *qf;
      QStandardItemModel*videoListModel;
+
+     QStandardItemModel*musicListModel;
      QStandardItemModel*historyListModel;
      int m_totalRows;      // 固定的总行数
      int m_currentHint;    // 当前已加载的数据量
      int m_loadCount;      // 每次加载的条数
      bool m_loading;      //防止重复加载
-     int windowsWidth;
      bool m_loaded;
 
 
      void onResetWindowSize(int width);
-  QString getUrlFromListView(int index);
 ///Controlbar的上一曲下一曲会经过这里
   void playFromListView(int index);
  public slots:
+ void   onLocalListItemDoubleClicked(const QModelIndex &index );
          void setTheme(DGuiApplicationHelper::ColorType);
          void clearMusicTable();
          void clearVideoTable();
@@ -91,38 +92,20 @@
      void initSource();
 
     signals:
-     void temp(int index);
+    void toResizeWidget(int width);
  };
 
  ///调整Dlistview项间距
-class CustomItemDelegate : public QItemDelegate {
-public:
-    int factor = 1;
-    CustomItemDelegate(QObject *parent = nullptr) : QItemDelegate(parent) {}
+ // 外部因子变量，用于调节列宽比例（例如可根据窗口大小进行修改）
+ static int factor = 800;
+ // 自定义代理，负责绘制每一行的内容
+ class TableItemDelegate : public QStyledItemDelegate
+ {
+ public:
+     TableItemDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
 
-    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
-
-        QItemDelegate::paint(painter, option, index);
-    }
-
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override {
-        QSize size = QItemDelegate::sizeHint(option, index);
-        if(size.width()>=100)
-        size.setWidth(size.width() +factor);
-        return size;
-    }
-};
-class CustomListView : public DListView {
-    Q_OBJECT
-public:
-    QString url;
-    MusicTable *tableWidget;
-    CustomItemDelegate *itemdelegate;
-    int number;
-    void mouseDoubleClickEvent(QMouseEvent *event);
-
-    void play();
-};
+     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+ };
 class HistoryTable : public DListView {
     Q_OBJECT
 public:

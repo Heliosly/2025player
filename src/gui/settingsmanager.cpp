@@ -97,6 +97,6 @@ void SettingsManager::deletePath(const QString &path)
 {
     paths.removeOne(path);
 
-    deleteSettings("locallist",path);
+    deleteSettings("localPaths",path);
     emit pathChange();
 }

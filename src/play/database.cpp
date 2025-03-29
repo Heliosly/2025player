@@ -115,7 +115,7 @@ bool DataBase::createFilePathTable()
      else{
          qDebug()<<"?";
      }
- qDebug()<<"成功创建 locallist；wtable";
+ qDebug()<<"成功创建 locallist；";
      return true;
  }
  bool DataBase::createHistoryListNotExist()
@@ -378,16 +378,14 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
     QList<MetaData> resultList;
     QSqlQuery sql_query(db);
 
-    // 构建 SQL 查询语句
     QString sqlStatement = QString(
-        "SELECT filepath, title, artist, album, duration "
+        "SELECT filepath, title, artist, album, duration, poster "  // 增加 poster 字段
         "FROM locallist "
         "LIMIT :offset OFFSET :hint;"
     );
 
     sql_query.prepare(sqlStatement);
     sql_query.bindValue(":hint", hint);
-
     sql_query.bindValue(":offset", offset);
 
     // 执行查询
@@ -404,8 +402,17 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
         QString album = sql_query.value("album").toString();
         int duration = sql_query.value("duration").toInt();
 
+        // 读取 poster 的 BLOB 数据并转换为 QPixmap
+        QByteArray posterData = sql_query.value("poster").toByteArray();
+        QPixmap poster;
+        if (!posterData.isEmpty()) {
+            if (!poster.loadFromData(posterData)) {
+                qDebug() << "加载 poster 失败";
+            }
+        }
+
         // 创建 MetaData 对象并添加到结果列表
-        MetaData metaData(filepath, title, artist, album, duration, QPixmap());
+        MetaData metaData(filepath, title, artist, album, duration, poster);
         resultList.append(metaData);
     }
 
