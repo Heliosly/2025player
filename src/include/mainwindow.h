@@ -20,6 +20,8 @@ public:
     ~MainWindow();
 
 private:
+    bool isFull=0;
+    bool isVideoPage=0;
     QWidget *cw = new QWidget(this);
     NavWidget *Navw = new  NavWidget;
     ControlBar * cbar = new ControlBar(this);
@@ -35,6 +37,8 @@ private:
     QStackedWidget * page;
     MusicTable *music_table;
     SettingPage *settingPage ;
+    QWidget*cw2=new QWidget(this);
+    QStackedWidget * mainPage;
 
     void LoadStyleSheet(QString url);
 
@@ -47,8 +51,16 @@ public slots:
     /// 程序退出时调用
     void onAppAboutToQuit();
     // void setupConnections() ;
+
+    void onShiftScreen();
 public emit:
     void showSettingPage();
+private:
+     QWidget*videoOriginalParent;
+    QLayout*videoOriginalLayout;
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+
 };
 
 #endif // MAINWINDOW_H

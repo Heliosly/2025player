@@ -32,6 +32,8 @@ public:
     DIconButton *btloop;
     //DIconButton *btvolume=new DIconButton(this);
     DIconButton *btscreen;
+    DIconButton *btspeed;
+    int speedstate=1;
     MusicTable*table;
     MusicPlayer* mediaPlayer;
     QTimer* cTimer;
@@ -76,6 +78,10 @@ public slots:
     void handlePrevious();
     void handleVolumeUp();
     void handleVolumeDown();
+    void onSetSpeed();
+
+
+
 
 };
 

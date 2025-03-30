@@ -1,6 +1,8 @@
 #include "videoplayer.h"
 #include <QVBoxLayout>
 #include<QDebug>
+#include<QMouseEvent>
+#include<QApplication>
 VideoPlayer*VideoPlayer::s_instance = nullptr;
 VideoPlayer*VideoPlayer::instance()
 {
@@ -12,7 +14,10 @@ VideoPlayer*VideoPlayer::instance()
 QtAV::AVPlayer* VideoPlayer::player(){
     return m_player;
 }
-VideoPlayer::VideoPlayer(QWidget *parent) : QWidget(parent) {
+VideoPlayer::VideoPlayer()   {
+    m_timer = new QTimer(this);
+       m_timer->setSingleShot(true);
+       connect(m_timer, &QTimer::timeout, this, &VideoPlayer::handleSingleClick);
     // 初始化播放器
     m_player = new QtAV::AVPlayer(this);
 
@@ -22,10 +27,10 @@ VideoPlayer::VideoPlayer(QWidget *parent) : QWidget(parent) {
         DMessageBox::critical(nullptr, "Error", "Failed to create video renderer!");
         return;
     }
-    QVBoxLayout *layout = new QVBoxLayout(this);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->addWidget(m_videoOutput->widget());
-        setLayout(layout);
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->addWidget(m_videoOutput->widget());
+    setLayout(mainLayout);
+    m_videoOutput->widget()->installEventFilter(this);
 
     // 绑定播放器和渲染器
     m_player->setRenderer(m_videoOutput);
@@ -41,6 +46,9 @@ VideoPlayer::VideoPlayer(QWidget *parent) : QWidget(parent) {
 
 }
 
+bool VideoPlayer::isPlaying(){
+return m_player->isPlaying();
+}
 VideoPlayer::~VideoPlayer() {
     stop();
     delete m_videoOutput;
@@ -52,30 +60,30 @@ void VideoPlayer::play(const QString &url) {
     m_player->stop();
     m_player->play(url);
     qDebug()<<url;
+    manualStopped=0;
 }
 
 // 继续播放
 void VideoPlayer::play() {
     if (m_player->isPlaying()) {
-        qDebug("isPaused = %d", m_player->isPaused());
         m_player->pause(!m_player->isPaused()); // 切换暂停状态
     }
     else {
 
         m_player->play();
-    }}
+    }
+}
 
 
 // 暂停
 void VideoPlayer::pause() {
     m_player->pause(true);
-        qDebug()<<"pause";
-}
 
+}
 // 停止
 void VideoPlayer::stop() {
+    manualStopped=1;
     m_player->stop();
-    qDebug()<<"stop";
 }
 
 // 设置音量（0~100 → 转换为 0.0~1.0）
@@ -107,3 +115,43 @@ qint64 VideoPlayer::position() const {
 QtAV::AVPlayer::State VideoPlayer::state() const {
     return m_player->state();
 }
+
+QWidget* VideoPlayer::widget(){
+    return m_videoOutput->widget();
+}
+
+void VideoPlayer::shiftScreen(bool isFull){
+    if(isFull){
+        m_videoOutput->widget()->showNormal();
+    }else{
+        m_videoOutput->widget()->showFullScreen();
+    }
+}
+bool VideoPlayer::eventFilter(QObject *obj, QEvent *event)
+{
+    if ( event->type() == QEvent::MouseButtonDblClick) {
+        m_timer->stop();
+        emit toShiftScreen();
+        return true; // 事件已处理
+    } else if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            m_timer->start(QApplication::doubleClickInterval());
+
+
+
+        }
+        return true;
+    }
+
+    return QWidget::eventFilter(obj, event);
+}
+void VideoPlayer::handleSingleClick()
+{
+    if(m_player->isPlaying()){
+        play();
+    }
+    else{
+        pause();
+    }
+  }

@@ -8,6 +8,9 @@
 #include <QRandomGenerator>
 ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
 {
+
+    this->setObjectName("control_bar");
+    btspeed= new DIconButton(this);
     btplay = new DIconButton(this);
     btpre = new DIconButton(btplay);
     btstop = new DIconButton(btplay);
@@ -15,13 +18,17 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
 
     btloop = new DIconButton(btplay);
     btscreen = new DIconButton(btplay);
+
+    btscreen->setDisabled(true);
     currenttime = 0;
     cTimer = new QTimer(this);
 
     // this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
-    QPalette qp = parent->palette();
-    qp.setColor(QPalette::Background, Qt::transparent);
     QVBoxLayout *MainVlayout = new QVBoxLayout(this);
+    this->setLayout(MainVlayout);
+    MainVlayout->setContentsMargins(20,10,20,3);
+
+
     QHBoxLayout *UpHlayout = new QHBoxLayout();
     QHBoxLayout *DownHlayout = new QHBoxLayout();
     playtime = new DLabel(this);
@@ -44,6 +51,12 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
     btpre->setFixedSize(QSize(30, 30));
     btpre->setObjectName("bt_pre");
     // btpre->setStyleSheet("#bt_pre{ background-color: transparent;}");
+    btspeed->setIcon(QIcon(":/asset/image/1xspeed.PNG"));
+    btspeed->setIconSize(QSize(36, 36));
+    btspeed->setFixedSize(QSize(36, 36));
+    btspeed->setObjectName("bt_speed");
+
+
 
     btstop->setIcon(QIcon(":/asset/image/stop.PNG"));
     btstop->setIconSize(QSize(18, 18));
@@ -107,6 +120,7 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
     DownHlayout->addWidget(volumeSlider);
     DownHlayout->addSpacing(5);
     DownHlayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum));
+    DownHlayout->addWidget(btspeed);
     DownHlayout->addWidget(btloop);
     DownHlayout->addWidget(btscreen);
     connect(btplay, &DIconButton::clicked, this, &ControlBar::playslot);
@@ -123,6 +137,9 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
     connect(processSlider, &DSlider::sliderReleased, this, &ControlBar::processsetting);
     connect(volumeSlider, &DSlider::valueChanged, this, &ControlBar::volumesetting);
     connect(btloop, &DIconButton::clicked, this, &ControlBar::onLoopChange);
+
+    connect(btspeed, &DIconButton::clicked, this, &ControlBar::onSetSpeed);
+
     LoadStyleSheet();
 
     //    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QMediaPlayer::setVolume);
@@ -140,15 +157,8 @@ void ControlBar::LoadStyleSheet()
 
     if (file.isOpen())
     {
-        QString style = this->styleSheet();
-        style += QLatin1String(file.readAll());
-        btplay->setStyleSheet(style);
-        btpre->setStyleSheet(style);
-        btnex->setStyleSheet(style);
-        btscreen->setStyleSheet(style);
-        btstop->setStyleSheet(style);
-        btloop->setStyleSheet(style);
-        file.close();
+        QString style= QLatin1String(file.readAll());
+        this->setStyleSheet(style);        file.close();
     }
 }
 /// 计算分秒
@@ -183,48 +193,50 @@ QString formatTime(int timeInSeconds)
 
 void ControlBar::changePlayer(bool temp){
     stopslot();
-     btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+    btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+    currenttime = 0;
+
+    playtime->setText("--.--");
+    endtime->setText("--.--");
+    cTimer->stop();
+    processSlider->setValue(0);
+    if(temp==1){
+        isVideo=1;
+        btscreen->setDisabled(false);
+
+    }
+    else {
+        isVideo=0;
+        btscreen->setDisabled(true);
+    }
+
+}
+void ControlBar::videoStateChang(QtAV::AVPlayer::State state){
+
+    if (state == QtAV::AVPlayer::StoppedState)
+    {
+        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
         currenttime = 0;
 
         playtime->setText("--.--");
         endtime->setText("--.--");
         cTimer->stop();
         processSlider->setValue(0);
-    if(temp==1){
-        isVideo=1;
-
     }
-    else {
-        isVideo=0;
-    }
-
-}
-void ControlBar::videoStateChang(QtAV::AVPlayer::State state){
-
-            if (state == QtAV::AVPlayer::StoppedState)
-            {
-                btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-                currenttime = 0;
-
-                playtime->setText("--.--");
-                endtime->setText("--.--");
-                cTimer->stop();
-                processSlider->setValue(0);
-            }
-            else if (state == QtAV::AVPlayer::PlayingState)
-            {
-                btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
-                if (currenttime)
-                {
-                    cTimer->start();
-                }
-            }
-            else
-            {
-                btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-                cTimer->stop();
-            }
+    else if (state == QtAV::AVPlayer::PlayingState)
+    {
+        btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
+        if (currenttime)
+        {
+            cTimer->start();
         }
+    }
+    else
+    {
+        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        cTimer->stop();
+    }
+}
 
 void ControlBar::musicStateChange(QMediaPlayer::State state)
 {
@@ -303,10 +315,10 @@ void ControlBar::preslot()
 void ControlBar::stopslot()
 {
     if (isVideo)
-{
+    {
         VideoPlayer::instance()->stop();
         emit toReturnMediaTable();}
-        
+
     else
         mediaPlayer->stop();
 }
@@ -405,41 +417,41 @@ void ControlBar::PlaySliderValueReset()
 }
 void ControlBar::videoMediaChange(QtAV::MediaStatus state){
 
-            // 视频处理
-            if (state == QtAV::MediaStatus::LoadedMedia)  // QtAV 的 LoadedState
+    // 视频处理
+    if (state == QtAV::MediaStatus::LoadedMedia)  // QtAV 的 LoadedState
+    {
+        // 播放器加载完毕
+        auto player = VideoPlayer::instance();  // 使用 VideoPlayer 实例
+        PlaySliderValueReset();
+        endtime->setText(QString(formatTime(player->duration() / 1000 + 1)));
+        processSlider->setMaximum(player->duration() / 1000 + 1);
+    }
+    else if (state == QtAV::MediaStatus::EndOfMedia&&!VideoPlayer::instance()->manualStopped)  // QtAV 的 EndOfMedia
+    {
+        // 播放结束
+        auto m_player = VideoPlayer::instance()->player();
+        if(m_player->position() == m_player->duration()){ cTimer->stop();
+            if (loopstate == Loop)
             {
-                // 播放器加载完毕
-                auto player = VideoPlayer::instance();  // 使用 VideoPlayer 实例
                 PlaySliderValueReset();
-                endtime->setText(QString(formatTime(player->duration() / 1000 + 1)));
-                processSlider->setMaximum(player->duration() / 1000 + 1);
+                playslot();
             }
-            else if (state == QtAV::MediaStatus::EndOfMedia)  // QtAV 的 EndOfMedia
+            else if (loopstate == Queue)
             {
-                // 播放结束
-                auto m_player = VideoPlayer::instance()->player();
-                if(m_player->position() == m_player->duration()){ cTimer->stop();
-                    if (loopstate == Loop)
-                    {
-                        PlaySliderValueReset();
-                        playslot();
-                    }
-                    else if (loopstate == Queue)
-                    {
-                        nexslot();
-                    }
-                    else
-                    {
-                        QModelIndex currentIndex = temp->video_table->currentIndex();
-                        int index = currentIndex.row();
-                        int randomNumber = QRandomGenerator::global()->bounded(0, index);
-                        if (index < temp->video_table->count())
-                        {
-                            temp->playMusicFromIndex(randomNumber);
-                        }
-                    }}
-
+                nexslot();
             }
+            else
+            {
+                QModelIndex currentIndex = temp->video_table->currentIndex();
+                int index = currentIndex.row();
+                int randomNumber = QRandomGenerator::global()->bounded(0, index);
+                if (index < temp->video_table->count())
+                {
+                    temp->playMusicFromIndex(randomNumber);
+                }
+            }}
+
+    }
 
 }
 void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
@@ -447,13 +459,13 @@ void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
     /// 换媒体文件
     if (state == QMediaPlayer::MediaStatus::LoadedMedia)
     {
-              PlaySliderValueReset();
+        PlaySliderValueReset();
         endtime->setText(QString(formatTime(mediaPlayer->duration() / 1000 + 1)));
         processSlider->setMaximum(mediaPlayer->duration() / 1000 + 1);
     }
     else if (state == QMediaPlayer::MediaStatus::EndOfMedia)
     {
-              cTimer->stop();
+        cTimer->stop();
         if (loopstate = Loop)
         {
             PlaySliderValueReset();
@@ -484,16 +496,16 @@ void ControlBar::volumesetting(int value)
 {
     if (isVideo)
 
-     VideoPlayer::instance()->setVolume(value);
-     else
-    mediaPlayer->setVolume(value);
+        VideoPlayer::instance()->setVolume(value);
+    else
+        mediaPlayer->setVolume(value);
 }
 void ControlBar::processsetting()
 {
-if(isVideo)
-     VideoPlayer::instance()->setPosition(processSlider->value()*1000);
-     else
-    mediaPlayer->setPosition(processSlider->value() * 1000);
+    if(isVideo)
+        VideoPlayer::instance()->setPosition(processSlider->value()*1000);
+    else
+        mediaPlayer->setPosition(processSlider->value() * 1000);
 }
 void ControlBar::switchvolume()
 {
@@ -537,4 +549,41 @@ void ControlBar::handleVolumeUp()
 void ControlBar::handleVolumeDown()
 {
     volumeSlider->setValue(volumeSlider->value() - 5);
+}
+void ControlBar::onSetSpeed(){
+    qreal speed;
+
+    if(speedstate==3){
+        speedstate=0;
+
+    }else{
+        speedstate+=1;
+
+    }
+    if (speedstate == 0) {
+        speed = 0.5;
+        btspeed->setIcon(QIcon(":/asset/image/0.5xspeed.PNG"));
+        VideoPlayer::instance()->setSpeed(speed);
+
+    } else if (speedstate == 1) {
+        speed = 1;
+        btspeed->setIcon(QIcon(":/asset/image/1xspeed.PNG"));
+        VideoPlayer::instance()->setSpeed(speed);
+
+    } else if (speedstate == 2) {
+        speed = 1.5;
+        btspeed->setIcon(QIcon(":/asset/image/1.5xspeed.PNG"));
+        VideoPlayer::instance()->setSpeed(speed);
+
+    } else if (speedstate == 3) {
+        speed = 2;
+        btspeed->setIcon(QIcon(":/asset/image/2xspeed.PNG"));
+        VideoPlayer::instance()->setSpeed(speed);
+    }
+
+
+
+
+
+
 }

@@ -23,5 +23,9 @@
         <file>asset/image/loop.png</file>
         <file>asset/image/settings.PNG</file>
         <file>asset/image/unknowcovpix.jpg</file>
+        <file>asset/image/1xspeed.PNG</file>
+        <file>asset/image/0.5xspeed.PNG</file>
+        <file>asset/image/2xspeed.PNG</file>
+        <file>asset/image/1.5xspeed.PNG</file>
     </qresource>
 </RCC>

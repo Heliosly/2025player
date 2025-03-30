@@ -21,7 +21,9 @@ PathSelector::PathSelector(QWidget *parent)
      
      
     // 创建按钮和菜单
-    menu = new DMenu(this);
+    menu = new DMenu(this);// 设置菜单宽度与 pathButton 一致
+
+
     pathButton = new DPushButton("选择路径 ▾", this);
     pathButton->setMenu(menu);
     mainLayout->addWidget(pathButton);
@@ -53,7 +55,6 @@ void PathSelector::initUpdateMenu()
         itemLayout->setSpacing(10);
 
         DLabel *label = new DLabel(path, itemWidget);
-        label->setStyleSheet("font-size: 13px; color: #333;");
         DToolButton *deleteButton = new DToolButton(itemWidget);
         deleteButton->setText("✖");
         deleteButton->setCursor(Qt::PointingHandCursor);
@@ -62,6 +63,7 @@ void PathSelector::initUpdateMenu()
             "QToolButton:hover { color: red; }"
         );
 
+        label->setStyleSheet("font-size: 13px; color: #333;");
         itemLayout->addWidget(label);
         itemLayout->addStretch();
         itemLayout->addWidget(deleteButton);
@@ -92,6 +94,7 @@ void PathSelector::initUpdateMenu()
 
     connect(addBtn, &QPushButton::clicked, this, &PathSelector::addNewPath);
 
+    menu->setMinimumWidth(pathButton->width());
 }
 void PathSelector::updateMenu()
 {
@@ -143,6 +146,8 @@ void PathSelector::updateMenu()
     QWidgetAction *addAction = new QWidgetAction(menu);
     addAction->setDefaultWidget(addBtn);
     menu->addAction(addAction);
+    // 设置菜单宽度与 pathButton 一致
+    menu->setMinimumWidth(pathButton->width());
 
     connect(addBtn, &QPushButton::clicked, this, &PathSelector::addNewPath);
 }

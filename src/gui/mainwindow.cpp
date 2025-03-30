@@ -2,6 +2,7 @@
 #include"shortcutmanager.h"
 #include"videoplayer.h"
 #include<QVBoxLayout>
+#include<QScreen>
 #include<QHBoxLayout>
 #include<DPushButton>
 #include<DLabel>
@@ -26,7 +27,7 @@ MainWindow::MainWindow()
     this->setTitlebarShadowEnabled(false);
     this->setWindowRadius(18);
     this->setObjectName("main_window");
-    this->resize(QSize(1450, 800));
+    this->resize(QSize(1450, 900));
     this->setShadowColor(Qt::transparent);
     this->setEnableSystemResize(true);
     this->LoadStyleSheet(":/asset/qss/mainwindow_dark.qss");
@@ -34,10 +35,7 @@ MainWindow::MainWindow()
     DTitlebar * bar=this->titlebar()
                     ;
 
-    bar->setBackgroundTransparent(true);
-    bar->setFixedHeight(50);
     bar->setSeparatorVisible(false);
-    bar->setAutoHideOnFullscreen(true);
     bar->setSwitchThemeMenuVisible(true);
     DIconButton* leftButton = new DIconButton(bar);
     leftButton->setIcon(QIcon(":/asset/image/settings.PNG"));
@@ -55,22 +53,24 @@ MainWindow::MainWindow()
     cbar->temp=music_table;
 
     page = new QStackedWidget(this);
+    mainPage=new QStackedWidget(this);
 
     page->addWidget(music_table);
     page->addWidget(settingPage);
     RightHLayout->addWidget(page);
-    page->addWidget(VideoPlayer::instance());
+
     cw->setLayout(MainVLayout);
 
+    MainVLayout->addWidget(mainPage);
     //cw->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     //    QPalette palette = this->palette();
     //    palette.setColor(QPalette::Background,Qt::transparent);
     //    cw->setPalette(palette);
+    mainPage->addWidget(cw2);
 
-    cbar->setStyleSheet("background-color:white");
+    mainPage->addWidget(VideoPlayer::instance());
+    cw2->setLayout(UpHLayout);
 
-    MainVLayout->addSpacing(5);
-    MainVLayout->addLayout(UpHLayout);
     MainVLayout->addLayout(DownHLayout);
     LeftHLayout->addWidget(Navw);
     LeftHLayout->setContentsMargins(20,0,20,20);
@@ -81,11 +81,12 @@ MainWindow::MainWindow()
     MainVLayout->setSpacing(0);
 
     DownHLayout->addWidget(cbar);
+    DownHLayout->setContentsMargins(20,0,20,3);
 
     UpHLayout->setStretch(0, 1);
     UpHLayout->setStretch(1, 4);
 
-    MainVLayout->setStretch(0, 9);
+    MainVLayout->setStretch(0, 8);
     MainVLayout->setStretch(1, 1);
     this->setCentralWidget(cw);
     //切换主题
@@ -115,21 +116,30 @@ MainWindow::MainWindow()
             cbar, &ControlBar::handleVolumeDown);
     ShortcutManager::instance()->bindActionsTo(this);
     connect(cbar,&ControlBar::toReturnMediaTable,this,&MainWindow::closeVideoPage);
+
+    connect(cbar->btscreen, &DIconButton::clicked, this, &MainWindow::onShiftScreen);
     connect(music_table,&MusicTable::videoPlaying,this,&MainWindow::showVideoPage);
+    connect(VideoPlayer::instance(),&VideoPlayer::toShiftScreen,this,&MainWindow::onShiftScreen);
 }
 void MainWindow::closeVideoPage(){
 
-    page->setCurrentIndex(0);
+    if(isFull){
+    showNormal();
+    isFull =!isFull;
+    }
+    mainPage->setCurrentIndex(0);
+    isVideoPage=0;
 
 }
 ///切换到设置页面
 void MainWindow::showSettingPage(){
-    page->setCurrentIndex(1);
+   page->setCurrentIndex(1);
 
 }
 ///显示播放器播放视频
 void MainWindow::showVideoPage(){
-    page->setCurrentIndex(2);
+    mainPage->setCurrentIndex(1);
+    isVideoPage=1;
 }
 ///深色浅色两套主题的颜色/图标设置
 void MainWindow::setTheme(DGuiApplicationHelper::ColorType theme)
@@ -199,3 +209,39 @@ void MainWindow::LoadStyleSheet( QString url)
 void MainWindow::onAppAboutToQuit() {
 
 }
+
+// 实现代码
+void MainWindow::onShiftScreen()
+{
+
+       if(!isFull) {
+
+           showFullScreen();
+
+    } else {
+
+
+
+showNormal();
+
+
+    }
+
+    isFull = !isFull;
+
+  }
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    // 当全屏且按下 ESC 键时退出全屏
+    if (event->key() == Qt::Key_Escape && isFull) {
+        showNormal();
+        isFull = false;
+        event->accept();
+        return;
+    }
+    QMainWindow::keyPressEvent(event);
+}
+
+
+
+
