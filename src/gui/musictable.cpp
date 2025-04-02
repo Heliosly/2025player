@@ -19,7 +19,6 @@
 MusicTable::MusicTable()
 {
     this->setObjectName("localmusic");
-   // LoadStyleSheet();
     localMusicLayout();
     initSource();
     initItem();
@@ -125,15 +124,13 @@ void MusicTable::initItem()
     music_table = new DListView(this);
     musicListModel = new QStandardItemModel();
     music_table->setModel(musicListModel);
-    TableItemDelegate *delegate = new TableItemDelegate(music_table);
+    delegate = new TableItemDelegate(music_table);
     music_table->setItemDelegate(delegate);
 
     setMusicCount
                     (DataBase::instance()->getListCount("locallist"));
     setLoadParameters(0, 50); // 每次加载 50 行
-    music_table->setObjectName("table_music");
     QList<QString> tableList; //
-    // QStandardItemModel* headmodel = new QStandardItemModel;
 
     tableList << "#" << "音乐标题" << "专辑" << "时长";
     music_table->setIconSize(QSize(60, 60));
@@ -143,46 +140,35 @@ void MusicTable::initItem()
 
 
 
-    music_table->setBackgroundType(DStyledItemDelegate::BackgroundType::NoBackground);
 
     music_table->setAlternatingRowColors(false);
     // 设置表格内容不可编辑
     music_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    // 设置为行选择
-    //    music_table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    // 设置最后一栏自适应长度
-    //     title_table->horizontalHeader()->setStretchLastSection(true);
-    // 删除网格表
-    //     title_table->setShowGrid(false);
-    // 去除边框线
-    music_table->setFrameShape(QFrame::NoFrame);
-    // 去除选中虚线框
-    music_table->setFocusPolicy(Qt::NoFocus);
 
-    // 设置点击单元格时，表头项不高亮
-    //     title_table->horizontalHeader()->setHighlightSections(false);
-    //     title_table->verticalHeader()->setHighlightSections(false);
     // 设置只能选中一个目标
     music_table->setSelectionMode(QAbstractItemView::SingleSelection);
     // 设置垂直滚动条最小宽度
     music_table->verticalScrollBar()->setMaximumWidth(7);
     music_table->setResizeMode(QListView::Adjust);
-    //    title_table->verticalHeader()->setObjectName("music_verticalHeader");
     if(DataBase::instance()->countLocallist)loadMoreData();
     else {
         m_loaded=true;
     }
     video_table = new DListView(this);
+    normalDelegate = new normalItemDelegate(this);
+    video_table->setItemDelegate(normalDelegate);
     video_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     video_table->setViewMode(QListView::IconMode);
-    video_table->setIconSize(QSize(140, 140));
+    video_table->setOrientation(QListView::Flow::LeftToRight,1);
+    video_table->setIconSize(QSize(100, 100));
     video_table->setGridSize(QSize(200, 200));
     video_table->setSpacing(10);
     video_table->setResizeMode(QListView::Adjust);
     video_table->setMovement(QListView::Static);
     video_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     //            video_table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+
 
     video_table->setSpacing(30);
     videoListModel = new QStandardItemModel(this);
@@ -199,12 +185,9 @@ void MusicTable::initItem()
     historyTable->setSpacing(10);
     loadHistoryTable();
 
-    playAll = new DPushButton(this);
+    playAll = new QPushButton(this);
     playAll->setText("播放全部");
-    playAll->setMaximumSize(100, 40);
-    playAll->setMinimumSize(100, 40);
     playAll->setObjectName("playallBtn");
-    playAll->setIcon(QIcon(":/images/stackWidget/localMusic/btn_playall.png"));
 }
 
 void MusicTable::loadHistoryTable() {
@@ -247,6 +230,7 @@ void MusicTable::loadVideoTable()
 
             QStandardItem *item = new QStandardItem(icon, fileInfo.fileName());
             item->setData(fileInfo.absoluteFilePath(),Qt::UserRole+1);
+            item->setSizeHint(QSize(140,140));
 
             videoListModel->appendRow(item);
         }
@@ -304,12 +288,10 @@ void MusicTable::initLayout()
                                                   QSizePolicy::Expanding);
     // 从左到右 存储table上方控件的布局
     QHBoxLayout *button_HBoxLayout = new QHBoxLayout();
-    searchEdit = new DLineEdit();
+    searchEdit = new DLineEdit(this);
     searchEdit->setPlaceholderText("搜索本地音乐");
-    searchEdit->setObjectName("localSearch");
     searchEdit->setMaximumSize(200, 25);
     QAction *searchAction = new QAction(searchEdit);
-    searchAction->setIcon(QIcon(":/images/stackWidget/localMusic/icon_search.png"));
     // 设置ICON在搜索框右边
     searchEdit->addAction(searchAction);
     button_HBoxLayout->addWidget(playAll);
@@ -322,8 +304,9 @@ void MusicTable::initLayout()
 
     button_HBoxLayout->addSpacerItem(Button_HSpacer);
     button_HBoxLayout->addLayout(right_VBoxLayout);
-    qf = new QFrame();
+    qf = new DFrame();
     qf->setObjectName("tableqf");
+    qf->setFrameStyle(QFrame::NoFrame);
     QVBoxLayout *temp = new QVBoxLayout();
     // temp->addLayout(display_HBoxLayout);
     // temp->addSpacing(10);
@@ -346,6 +329,8 @@ void MusicTable::initLayout()
 }
 void MusicTable::playMusicFromIndex(int index){
     QModelIndex Index = musicListModel->index(index, 0);
+
+    music_table->setCurrentIndex(Index );
     MusicPlayer::instance().play( Index.data(Qt::UserRole + 5).toString());
 
 
@@ -444,9 +429,9 @@ void MusicTable::onBtPlayAll()
     }
     else qWarning()<<"[MusicTable::onBtPlayAll]:cant get first Item";
 
-}void MusicTable::LoadStyleSheet()
+}void MusicTable::LoadStyleSheet(const QString & url)
 {
-    QFile file(":/asset/qss/musictb.qss");
+    QFile file(url);
     file.open(QIODevice::ReadOnly);
 
     if (file.isOpen())
@@ -455,6 +440,9 @@ void MusicTable::onBtPlayAll()
         style += QLatin1String(file.readAll());
         this->setStyleSheet(style);
         file.close();
+    }
+    else{
+        qDebug()<<"musictable Qss load failed";
     }
 }
 
@@ -497,6 +485,8 @@ void MusicTable::resetMusicTable()
     int width =music_table ->width();
     width*=1.25;
     emit toResizeWidget(width);
+    resetVideoTable();
+
 
 
 }
@@ -551,16 +541,60 @@ void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
     // 开始绘制
     painter->save();
 
+    if(isLight)
+    {
     // 绘制选中背景（带圆角效果）
-    if (option.state & QStyle::State_Selected) {
-        QPainterPath path;
-        path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18); // 向内缩进 2px，圆角半径 18px
-        painter->setRenderHint(QPainter::Antialiasing,QPainter::SmoothPixmapTransform);
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(option.palette.highlight());
-        painter->drawPath(path);
-    }
+       if (option.state & QStyle::State_Selected) {
+           QPainterPath path;
+           path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);  // 向内缩进 2px，圆角半径 18px
+           painter->setRenderHint(QPainter::Antialiasing, true);  // 开启抗锯齿
+           painter->setPen(Qt::NoPen);  // 不绘制边框
+           painter->setBrush(QColor("#d3d3d3"));  // 获取系统选中颜色
+           painter->drawPath(path);  // 绘制圆角背景
+       } else if (option.state & QStyle::State_MouseOver) {
+           // 悬停时的背景（灰色）
+           QPainterPath path;
+           path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);
+           painter->setRenderHint(QPainter::Antialiasing, true);
+           painter->setPen(Qt::NoPen);
+           painter->setBrush(QColor("#f0f0f0"));  // 悬停颜色
+           painter->drawPath(path);
+       } else {
+//           // 默认背景色（灰色）
+//           QPainterPath path;
+//           path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);
+//           painter->setRenderHint(QPainter::Antialiasing, true);
+//           painter->setPen(Qt::NoPen);
+//           painter->setBrush(QColor("#f7f7f7"));  // 默认背景颜色
+//           painter->drawPath(path);
+       }
 
+    }
+       else{
+        if (option.state & QStyle::State_Selected) {
+            QPainterPath path;
+            path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);  // 向内缩进 2px，圆角半径 18px
+            painter->setRenderHint(QPainter::Antialiasing, true);  // 开启抗锯齿
+            painter->setPen(Qt::NoPen);  // 不绘制边框
+            painter->setBrush(QColor("#494949"));  // 获取系统选中颜色
+            painter->drawPath(path);  // 绘制圆角背景
+
+        } else if (option.state & QStyle::State_MouseOver) {
+            // 悬停时的背景（灰色）
+            QPainterPath path;
+            path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);
+            painter->setRenderHint(QPainter::Antialiasing, true);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor("#3c3c3c"));  // 悬停颜色
+            painter->drawPath(path);
+
+        }
+
+       }
+    if (isLight)
+        painter->setPen(Qt::black);
+    else
+        painter->setPen(Qt::white);
     painter->drawText(rectNum, Qt::AlignCenter, rowNumber);
 
     if (!icon.isNull()) {
@@ -575,16 +609,28 @@ void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
     rectDataA.setY(rectTextDataA.y() + rectTextDataA.height() / 2);
     rectDataA.setHeight(rectTextDataA.height() / 2);
 
-
-    painter->setPen(Qt::black);
+    if (isLight)
+        painter->setPen(Qt::black);
+    else
+        painter->setPen(Qt::white);
     painter->drawText(rectText, Qt::AlignLeft | Qt::AlignBottom, text);
 
-    painter->setPen(QColor(128, 128, 128));  // 灰色
+    if (isLight)
+        painter->setPen(QColor(128, 128, 128));  // 灰色
+    else
+        painter->setPen(QColor(200, 200, 200));  // 浅灰色
     painter->drawText(rectDataA, Qt::AlignLeft | Qt::AlignTop, dataA);
 
-    painter->setPen(Qt::black);
+    if (isLight)
+        painter->setPen(Qt::black);
+    else
+        painter->setPen(Qt::white);
     painter->drawText(rectDataB, Qt::AlignCenter, dataB);
 
+    if (isLight)
+        painter->setPen(Qt::black);
+    else
+        painter->setPen(Qt::white);
     painter->drawText(rectDataC, Qt::AlignCenter, dataC);
 
     painter->restore();
@@ -601,7 +647,77 @@ void MusicTable::videoplay(const QModelIndex &index ){
 }
 
 void MusicTable::playVideoFromIndex(int index){
+
     QModelIndex Index = videoListModel->index(index, 0);
+
+    video_table->setCurrentIndex(Index);
     VideoPlayer::instance()->play( Index.data(Qt::UserRole + 1).toString());
 
+}
+
+void MusicTable::setThemeType(bool isLight){
+    isLightTheme=isLight;
+    delegate->isLight=isLightTheme;
+    normalDelegate->isLight=isLightTheme;
+    pathSelector->isLight=isLightTheme;
+}
+
+void normalItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const{
+    painter->save();
+
+    if(isLight)
+    {
+    // 绘制选中背景（带圆角效果）
+       if (option.state & QStyle::State_Selected) {
+           QPainterPath path;
+           path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);  // 向内缩进 2px，圆角半径 18px
+           painter->setRenderHint(QPainter::Antialiasing, true);  // 开启抗锯齿
+           painter->setPen(Qt::NoPen);  // 不绘制边框
+           painter->setBrush(QColor("#d3d3d3"));  // 获取系统选中颜色
+           painter->drawPath(path);  // 绘制圆角背景
+       } else if (option.state & QStyle::State_MouseOver) {
+           // 悬停时的背景（灰色）
+           QPainterPath path;
+           path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);
+           painter->setRenderHint(QPainter::Antialiasing, true);
+           painter->setPen(Qt::NoPen);
+           painter->setBrush(QColor("#f0f0f0"));  // 悬停颜色
+           painter->drawPath(path);
+       } else {
+//           // 默认背景色（灰色）
+//           QPainterPath path;
+//           path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);
+//           painter->setRenderHint(QPainter::Antialiasing, true);
+//           painter->setPen(Qt::NoPen);
+//           painter->setBrush(QColor("#f7f7f7"));  // 默认背景颜色
+//           painter->drawPath(path);
+       }
+
+    }
+       else{
+        if (option.state & QStyle::State_Selected) {
+            QPainterPath path;
+            path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);  // 向内缩进 2px，圆角半径 18px
+            painter->setRenderHint(QPainter::Antialiasing, true);  // 开启抗锯齿
+            painter->setPen(Qt::NoPen);  // 不绘制边框
+            painter->setBrush(QColor("#494949"));  // 获取系统选中颜色
+            painter->drawPath(path);  // 绘制圆角背景
+
+        } else if (option.state & QStyle::State_MouseOver) {
+            // 悬停时的背景（灰色）
+            QPainterPath path;
+            path.addRoundedRect(option.rect.adjusted(2, 2, -2, -2), 18, 18);
+            painter->setRenderHint(QPainter::Antialiasing, true);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor("#3c3c3c"));  // 悬停颜色
+            painter->drawPath(path);
+
+        } else {
+
+        }
+
+       }
+
+    painter->restore();
+    QStyledItemDelegate::paint(painter, option, index);
 }

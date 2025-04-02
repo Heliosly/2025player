@@ -15,11 +15,12 @@
 #include <QCoreApplication>
 #include<QDir>
 DWIDGET_USE_NAMESPACE
-class PathSelector : public QWidget
+class PathSelector : public DWidget
 {
     Q_OBJECT
 public:
-    explicit PathSelector(QWidget *parent = nullptr);
+    bool isLight=0;
+    explicit PathSelector(DWidget *parent = nullptr);
 
 signals:
     // 当添加或删除路径时可通知上层

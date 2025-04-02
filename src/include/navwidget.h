@@ -3,17 +3,23 @@
 #define NAVWIDGET_H
 
 #include<DListView>
+#include<DLabel>
+#include<DFrame>
  DWIDGET_USE_NAMESPACE
  ///最左边导航栏
-class NavWidget : public QFrame
+class NavWidget : public DFrame
 {
     Q_OBJECT
 public:
     NavWidget();
     DListView *ListView1;
 
-private:
     void LoadStyleSheet(QString url);
 };
+class LabelItemDelegate : public QStyledItemDelegate {
+public:
+    LabelItemDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
 
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override    ;
+};
 #endif // NAVWIDGET_H

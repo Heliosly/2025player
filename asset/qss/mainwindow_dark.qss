@@ -5,6 +5,10 @@ margin: 10px;
 padding: 10px;
 }
 
+* {
+    font-family: "Arial", "Noto Sans CJK SC", sans-serif;
+    color:#fefefe;
+}
 
 
 
@@ -14,3 +18,10 @@ padding: 10px;
 
 
 
+DFrame{
+     border-radius: 40px;
+     border:  none;
+
+background-color: #383838;
+
+}

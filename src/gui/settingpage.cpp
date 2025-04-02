@@ -1,8 +1,10 @@
 #include "settingpage.h"
+#include<QFile>
 #include <QSettings>
 #include <DMessageBox>
+#include<DLabel>
 #include"shortcutmanager.h"
-SettingPage::SettingPage(QWidget *parent) : QFrame(parent) {
+SettingPage::SettingPage(QWidget *parent) : DFrame(parent) {
     setupUI();
     loadShortcuts();
 }
@@ -12,14 +14,15 @@ SettingPage::~SettingPage() {
 
 void SettingPage::setupUI() {
     scrollArea = new DScrollArea(this);
-    scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setStyleSheet("QScrollArea { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 18px; }");
-    scrollArea->setWidgetResizable(true);
-    QWidget *scrollWidget = new QWidget(scrollArea);
-    mainLayout = new QVBoxLayout(scrollWidget);
 
-    QLabel *titleLabel = new QLabel("快捷键设置", this);
-    titleLabel->setStyleSheet("font-size: 24px; font-weight: bold;");
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    this->setFrameStyle(QFrame::NoFrame);
+    scrollArea->setWidgetResizable(true);
+    DWidget *shortcutWidget = new DWidget(scrollArea);
+
+    mainLayout = new QVBoxLayout(shortcutWidget);
+
+    DLabel *titleLabel = new DLabel("快捷键设置", this);
     mainLayout->addWidget(titleLabel);
 
     // Create shortcut editors layout
@@ -34,7 +37,7 @@ void SettingPage::setupUI() {
         const QString &action = actions[i];
         QKeySequenceEdit *editor = new QKeySequenceEdit(this);
         shortcutEditors[action] = editor;
-        QLabel *actionLabel = new QLabel(action, this);
+        DLabel *actionLabel = new DLabel(action, this);
 
         if (i % 2 == 0) {
             leftColumn->addWidget(actionLabel);
@@ -55,7 +58,7 @@ void SettingPage::setupUI() {
     connect(saveButton, &QPushButton::clicked, this, &SettingPage::saveShortcuts);
     connect(resetButton, &QPushButton::clicked, this, &SettingPage::resetDefaults);
 
-    scrollArea->setWidget(scrollWidget);
+    scrollArea->setWidget(shortcutWidget);
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(scrollArea);
     setLayout(layout);
@@ -64,11 +67,15 @@ void SettingPage::setupUI() {
 void SettingPage::loadShortcuts() {
     QMap<QString, QKeySequence> shortcuts;
     SettingsManager::instance()->loadSettingsShortcutsMap(shortcuts);
-
+    bool s=0;
     for (const QString &action : shortcutEditors.keys()) {
         if (shortcuts.contains(action)) {
             shortcutEditors[action]->setKeySequence(shortcuts[action]);
+            s=1;
         }
+         }
+    if(!s){
+       resetDefaults();
     }
 }
 
@@ -94,10 +101,10 @@ void SettingPage::resetDefaults() {
 
     // 构建默认快捷键映射（直接从ShortcutManager获取）
     QMap<QString, QKeySequence> defaultShortcuts;
-    const QStringList actionNames = {"播放", "暂停", "下一曲", "上一曲", "音量加", "音量减"};
+    const QStringList actionNames = {"切换循环模式", "播放/暂停", "下一曲", "上一曲", "音量加", "音量减"};
     for (const QString &action : actionNames) {
-        if (manager->actions.contains(action)) {
-            defaultShortcuts[action] = manager->actions[action]->shortcut();
+        if (manager->hotkeys.contains(action)) {
+            defaultShortcuts[action] = manager->hotkeys[action]->shortcut();
         }
     }
 
@@ -113,4 +120,18 @@ void SettingPage::resetDefaults() {
     DMessageManager::instance()->sendMessage(this, style()->standardIcon(QStyle::SP_MessageBoxWarning),
     "重置成功" );
     
+}
+
+void SettingPage::LoadStyleSheet(QString url){
+ QFile file(url);
+    file.open(QIODevice::ReadOnly);
+
+    if (file.isOpen())
+    {
+        QString style = this->styleSheet();
+        style += QLatin1String(file.readAll());
+        this->setStyleSheet(style);
+        file.close();
+    }
+
 }

@@ -1,9 +1,19 @@
 QFrame#navigate_frame{
-    background-color: white;
-    color: white;
     outline: none;
-
-
+  
+    background-color: #323232;
     border-radius: 40px;
-    padding: 5px;
+   }
+QListView:item#navigate_list{
+    border-radius: 10px;
+}
+QListView:item:hover#navigate_list{
+    background-color: #3c3c3c;
+     border-radius: 10px; 
+    
+}
+QListView:item:selected#navigate_list{
+    background-color:   #0081FF;
+    border-radius: 10px; 
+    
 }

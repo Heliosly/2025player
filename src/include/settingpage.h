@@ -14,13 +14,15 @@
 #include <DScrollArea>
 #include<QStyle>
 
+#include<DFrame>
 DWIDGET_USE_NAMESPACE
-class SettingPage : public QFrame {
+class SettingPage : public DFrame {
     Q_OBJECT
 public:
     explicit SettingPage(QWidget *parent = nullptr);
     ~SettingPage();
 
+    void LoadStyleSheet(QString url);
 private slots:
     void saveShortcuts();
     void resetDefaults();

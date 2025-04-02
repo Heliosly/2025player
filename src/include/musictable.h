@@ -4,6 +4,7 @@
 #include"musicplayer.h"
 #include"pathselector.h"
 #include<QDir>
+#include<DFrame>
 #include<DTableWidget>
 #include<QStandardItemModel>
 #include<QWidget>
@@ -21,11 +22,14 @@
 #include<QStackedWidget>
  DWIDGET_USE_NAMESPACE
  class CustomListView;  
- class MusicTable : public QFrame {
+ class TableItemDelegate;
+ class normalItemDelegate;
+ class MusicTable : public DFrame {
      Q_OBJECT
  public:
      MusicTable();
 
+     void setThemeType(bool isLight);
      void loadMoreData();
 
      void deleteByDir(const QString&dir);
@@ -39,18 +43,17 @@
      DListView *music_table;
      DListView *video_table;
      DMainWindow*window;
-
+TableItemDelegate *delegate;
+normalItemDelegate *normalDelegate;
 
      DListView *historyTable;
-     DPushButton *playAll;
+     QPushButton *playAll;
      DLineEdit *searchEdit ;
-//     DLabel *displayLabel[2];
-//     QVBoxLayout *local_VBoxLayout;
      PathSelector*pathSelector;
      QHBoxLayout *display_HBoxLayout;
      QStackedWidget *page;
      QVector<CustomListView*> listDlistView;
-     QFrame *qf;
+     DFrame *qf;
      QStandardItemModel*videoListModel;
 
      QStandardItemModel*musicListModel;
@@ -58,8 +61,8 @@
      int m_totalRows;      // 固定的总行数
      int m_currentHint;    // 当前已加载的数据量
      int m_loadCount;      // 每次加载的条数
-     bool m_loading;      //防止重复加载
-     bool m_loaded;
+     bool m_loading=0;      //防止重复加载
+     bool m_loaded=0;
 
 
      void onResetWindowSize(int width);
@@ -67,7 +70,8 @@
   void playMusicFromIndex(int index);
   void playVideoFromIndex(int index);
   void playMediaFromIndexInHistory(int index);
- public slots:;
+
+     void LoadStyleSheet(const QString & url);
 
  void   onLocalListItemDoubleClicked(const QModelIndex &index );
          void setTheme(DGuiApplicationHelper::ColorType);
@@ -89,9 +93,9 @@
      void onSearchTextChange(QString text);
 
  private:
+     bool isLightTheme;
 
   const int MAX_HISTORY = 100; // 限制历史记录数量
-     void LoadStyleSheet();
      void localMusicLayout();
      void initLayout();
      void initItem();
@@ -111,6 +115,7 @@
  public:
      TableItemDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
 
+     bool isLight=0;
      void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
  };
 class HistoryTable : public DListView {
@@ -123,5 +128,12 @@ public:
     void mouseDoubleClickEvent(QMouseEvent *event);
 
     void musicPlay();
+};
+class normalItemDelegate : public QStyledItemDelegate {
+public:
+    bool isLight=0;
+    normalItemDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override    ;
 };
 #endif // MEDIATABLE_H

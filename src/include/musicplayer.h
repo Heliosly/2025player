@@ -66,7 +66,7 @@ public:
     void setVolume(int volume);
     void setPosition(qint64 position);
     qint64 duration();
-    void setSpeed(int speed);
+    void setSpeed(qreal speed);
 
 //nh
 

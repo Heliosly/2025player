@@ -12,10 +12,6 @@
         <file>asset/image/previous.PNG</file>
         <file>asset/image/stop.PNG</file>
         <file>asset/image/zvolume.PNG</file>
-        <file>asset/qss/musictb.qss</file>
-        <file>asset/qss/mainwindow_dark.qss</file>
-        <file>asset/qss/navwidget_dark.qss</file>
-        <file>asset/qss/cbar.qss</file>
         <file>asset/image/video2.PNG</file>
         <file>asset/image/shuffle.png</file>
         <file>asset/image/music2.PNG</file>
@@ -27,5 +23,13 @@
         <file>asset/image/0.5xspeed.PNG</file>
         <file>asset/image/2xspeed.PNG</file>
         <file>asset/image/1.5xspeed.PNG</file>
+        <file>asset/qss/cbar_dark.qss</file>
+        <file>asset/qss/cbar_light.qss</file>
+        <file>asset/qss/mainwindow_dark.qss</file>
+        <file>asset/qss/mainwindow_light.qss</file>
+        <file>asset/qss/musictb_dark.qss</file>
+        <file>asset/qss/musictb_light.qss</file>
+        <file>asset/qss/navwidget_dark.qss</file>
+        <file>asset/qss/navwidget_light.qss</file>
     </qresource>
 </RCC>

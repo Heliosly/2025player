@@ -9,6 +9,7 @@
 #include<QTimer>
 #include<DLabel>
 #include<DSlider>
+#include<DFrame>
 DWIDGET_USE_NAMESPACE
 enum LoopState{
 
@@ -17,7 +18,7 @@ enum LoopState{
    Queue,
 
 };
-class ControlBar : public QFrame
+class ControlBar : public DFrame
 {
     Q_OBJECT
 public:
@@ -35,7 +36,6 @@ public:
     DIconButton *btspeed;
     int speedstate=1;
     MusicTable*table;
-    MusicPlayer* mediaPlayer;
     QTimer* cTimer;
     DSlider* processSlider;
     DLabel*playtime;
@@ -47,7 +47,7 @@ public:
     ///记录归零之前的音量
     int preVolume=100;
     int  currenttime;
-    void LoadStyleSheet();
+    void LoadStyleSheet(const QString & url);
     void changePlayer(bool temp);
 void PlaySliderValueReset();
 signals:

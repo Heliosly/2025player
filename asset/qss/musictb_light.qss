@@ -1,0 +1,33 @@
+QPushButton#playallBtn
+{
+background-color: rgb(255, 51, 51);
+border: none;
+color: white;
+border-radius: 10px;
+font-size: 17px;
+min-width: 100px;
+min-height: 40px;
+}
+
+QPushButton#playallBtn:hover
+{
+background-color: rgb(220,72,57);
+border: none;
+color: white;
+border-radius: 10px;
+font-size: 17px;
+}
+QLabel {
+    color:#383838;
+
+}
+
+#localmusic{
+     border:none;
+
+    border-radius: 40px;
+background-color: white;
+}
+
+
+

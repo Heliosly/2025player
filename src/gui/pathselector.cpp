@@ -11,8 +11,8 @@
 #include <DFileDialog>
 #include<QtConcurrent>
 
-PathSelector::PathSelector(QWidget *parent)
-    : QWidget(parent)
+PathSelector::PathSelector(DWidget *parent)
+    : DWidget(parent)
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
@@ -49,21 +49,31 @@ void PathSelector::initUpdateMenu()
     for (const QString &path :SettingsManager::instance()->paths) {
        //以这种方式加载路径
         MusicPlayer::instance().initMusicByDir(path);
-        QWidget *itemWidget = new QWidget;
+        DWidget *itemWidget = new DWidget(this);
         QHBoxLayout *itemLayout = new QHBoxLayout(itemWidget);
         itemLayout->setContentsMargins(8, 4, 8, 4);
         itemLayout->setSpacing(10);
 
-        DLabel *label = new DLabel(path, itemWidget);
+        QLabel *label = new QLabel(path, itemWidget);
+//        label->setStyleSheet("");
+//        if (isLight){
+//            label->setStyleSheet("color: white;");// 设置字体
+//        }
+//        else{
+//             label->setStyleSheet("color: black;");
+//        }
+
+//        if (isLight){
+//            label->setStyleSheet("color: white;");// 设置字体
+//        }
+//        else{
+//             label->setStyleSheet("color: black;");
+//        }
         DToolButton *deleteButton = new DToolButton(itemWidget);
         deleteButton->setText("✖");
         deleteButton->setCursor(Qt::PointingHandCursor);
-        deleteButton->setStyleSheet(
-            "QToolButton { border: none; color: #888; }"
-            "QToolButton:hover { color: red; }"
-        );
 
-        label->setStyleSheet("font-size: 13px; color: #333;");
+
         itemLayout->addWidget(label);
         itemLayout->addStretch();
         itemLayout->addWidget(deleteButton);
@@ -84,11 +94,7 @@ void PathSelector::initUpdateMenu()
 
     // 添加“添加新文件夹”菜单项
     DPushButton *addBtn = new DPushButton("➕ 添加新文件夹", menu);
-    addBtn->setStyleSheet(
-        "QPushButton { padding: 6px 12px; color: #007AFF; border: none; background: transparent; }"
-        "QPushButton:hover { background-color: #eee; }"
-    );
-    QWidgetAction *addAction = new QWidgetAction(menu);
+      QWidgetAction *addAction = new QWidgetAction(menu);
     addAction->setDefaultWidget(addBtn);
     menu->addAction(addAction);
 
@@ -104,20 +110,23 @@ void PathSelector::updateMenu()
     // 遍历每个路径，创建自定义菜单项a
     for (const QString &path : SettingsManager::instance()->paths) {
         // 自定义 widget，内含路径标签和删除按钮
-        QWidget *itemWidget = new QWidget;
+        DWidget *itemWidget = new DWidget(this);
         QHBoxLayout *itemLayout = new QHBoxLayout(itemWidget);
         itemLayout->setContentsMargins(8, 4, 8, 4);
         itemLayout->setSpacing(10);
 
-        DLabel *label = new DLabel(path, itemWidget);
-        label->setStyleSheet("font-size: 13px; color: #333;");
+        QLabel *label = new QLabel(path, itemWidget);
+
+//        label->setStyleSheet("");
+//        if (isLight){
+//            label->setStyleSheet("color: white;");// 设置字体
+//        }
+//        else{
+//             label->setStyleSheet("color: black;");
+//        }
         DToolButton *deleteButton = new DToolButton(itemWidget);
         deleteButton->setText("✖");
         deleteButton->setCursor(Qt::PointingHandCursor);
-        deleteButton->setStyleSheet(
-            "QToolButton { border: none; color: #888; }"
-            "QToolButton:hover { color: red; }"
-        );
 
         itemLayout->addWidget(label);
         itemLayout->addStretch();
@@ -139,11 +148,7 @@ void PathSelector::updateMenu()
 
     // 添加“添加新文件夹”菜单项
     DPushButton *addBtn = new DPushButton("➕ 添加新文件夹", menu);
-    addBtn->setStyleSheet(
-        "QPushButton { padding: 6px 12px; color: #007AFF; border: none; background: transparent; }"
-        "QPushButton:hover { background-color: #eee; }"
-    );
-    QWidgetAction *addAction = new QWidgetAction(menu);
+      QWidgetAction *addAction = new QWidgetAction(menu);
     addAction->setDefaultWidget(addBtn);
     menu->addAction(addAction);
     // 设置菜单宽度与 pathButton 一致

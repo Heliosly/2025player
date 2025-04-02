@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QKeySequence>
 #include <QMap>
+#include<QHotkey>
 
 class ShortcutManager : public QObject
 {
@@ -13,12 +14,11 @@ public:
     static ShortcutManager* instance();
     void updateShortcut(const QString &name, const QKeySequence &keySequence);
 
-    QMap<QString, QAction*> actions;
+    QMap<QString, QHotkey*> hotkeys;
     void setupDefaultShortcuts();
-    void bindActionsTo(QWidget *target);
 signals:
     void playTriggered();
-    void pauseTriggered();
+    void switchLoopTriggered();
     void nextTriggered();
     void previousTriggered();
     void volumeUpTriggered();

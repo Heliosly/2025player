@@ -4,11 +4,14 @@ QT += sql
 INCLUDEPATH += /usr/include/taglib 
 
 INCLUDEPATH += /usr/include/x86_64-linux-gnu/qt5/QtAV
+INCLUDEPATH +=/usr/local/include
 LIBS += -L/usr/lib/x86_64-linux-gnu/qt5/qml/QtAV -lQtAV
 
 
 LIBS += -L/usr/lib -ltag
+LIBS += -L/usr/local/lib -lqhotkey
 
+LIBS += -L/usr/local/lib -lqhotkey -lX11
 
 QMAKE_CXXFLAGS += -I /usr/include/taglib 
 QMAKE_LIBS += -ltag

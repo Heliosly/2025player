@@ -6,7 +6,7 @@
 #include <DIconButton>
 #include <QFile>
 #include <QRandomGenerator>
-ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
+ControlBar::ControlBar(QWidget *parent) : DFrame(parent)
 {
 
     this->setObjectName("control_bar");
@@ -140,7 +140,6 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
 
     connect(btspeed, &DIconButton::clicked, this, &ControlBar::onSetSpeed);
 
-    LoadStyleSheet();
 
     //    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QMediaPlayer::setVolume);
 }
@@ -148,19 +147,25 @@ ControlBar::ControlBar(QWidget *parent) : QFrame(parent)
 void ControlBar::readVolume(const QString &filePath)
 {
     volumeSlider->setValue(preVolume);
-    mediaPlayer->setVolume(preVolume);
+    MusicPlayer::instance().setVolume(preVolume);
 }
-void ControlBar::LoadStyleSheet()
+void ControlBar::LoadStyleSheet(const QString & url)
 {
-    QFile file(":/asset/qss/cbar.qss");
+    QFile file(url);
     file.open(QIODevice::ReadOnly);
 
     if (file.isOpen())
     {
-        QString style= QLatin1String(file.readAll());
-        this->setStyleSheet(style);        file.close();
+        QString style = this->styleSheet();
+        style += QLatin1String(file.readAll());
+        this->setStyleSheet(style);
+        file.close();
+    }
+    else{
+        qDebug()<<"controlbar Qss load failed";
     }
 }
+
 /// 计算分秒
 QString formatTime(int timeInSeconds)
 {
@@ -280,17 +285,17 @@ void ControlBar::playslot()
         }
         return;
     }
-    auto player = mediaPlayer;
+    auto &player = MusicPlayer::instance();
 
-    if (player->state() == QMediaPlayer::PlayingState)
+    if (player.state() == QMediaPlayer::PlayingState)
     {
 
-        player->pause();
+        player.pause();
     }
     else
     {
 
-        player->play();
+        player.play();
     }
 }
 void ControlBar::preslot()
@@ -320,7 +325,7 @@ void ControlBar::stopslot()
         emit toReturnMediaTable();}
 
     else
-        mediaPlayer->stop();
+        MusicPlayer::instance().stop();
 }
 void ControlBar::nexslot()
 {
@@ -340,15 +345,19 @@ void ControlBar::nexslot()
     }
     QModelIndex currentIndex = temp->music_table->currentIndex();
     int index = currentIndex.row();
-
     if (index < temp->music_table->count())
     {
         temp->playMusicFromIndex(index + 1);
+        index++;
+
     }
 
     else
     {
         temp->playMusicFromIndex(0);
+
+       temp->music_table->setCurrentIndex(currentIndex);
+       index=0;
     }
 }
 
@@ -418,7 +427,7 @@ void ControlBar::PlaySliderValueReset()
 void ControlBar::videoMediaChange(QtAV::MediaStatus state){
 
     // 视频处理
-    if (state == QtAV::MediaStatus::LoadedMedia)  // QtAV 的 LoadedState
+    if (state == QtAV::MediaStatus::LoadedMedia||state== QtAV::MediaStatus::BufferedMedia)  // QtAV 的 LoadedState
     {
         // 播放器加载完毕
         auto player = VideoPlayer::instance();  // 使用 VideoPlayer 实例
@@ -457,11 +466,11 @@ void ControlBar::videoMediaChange(QtAV::MediaStatus state){
 void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
 {
     /// 换媒体文件
-    if (state == QMediaPlayer::MediaStatus::LoadedMedia)
+    if (state == QMediaPlayer::MediaStatus::LoadedMedia||state==QMediaPlayer::MediaStatus::BufferedMedia)
     {
         PlaySliderValueReset();
-        endtime->setText(QString(formatTime(mediaPlayer->duration() / 1000 + 1)));
-        processSlider->setMaximum(mediaPlayer->duration() / 1000 + 1);
+        endtime->setText(QString(formatTime(MusicPlayer::instance().duration() / 1000 + 1)));
+        processSlider->setMaximum(MusicPlayer::instance().duration() / 1000 + 1);
     }
     else if (state == QMediaPlayer::MediaStatus::EndOfMedia)
     {
@@ -477,6 +486,8 @@ void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
         }
         else
         {
+
+
             QModelIndex currentIndex = temp->music_table->currentIndex();
             int index = currentIndex.row();
             int randomNumber = QRandomGenerator::global()->bounded(0, index);
@@ -498,14 +509,14 @@ void ControlBar::volumesetting(int value)
 
         VideoPlayer::instance()->setVolume(value);
     else
-        mediaPlayer->setVolume(value);
+        MusicPlayer::instance().setVolume(value);
 }
 void ControlBar::processsetting()
 {
     if(isVideo)
         VideoPlayer::instance()->setPosition(processSlider->value()*1000);
     else
-        mediaPlayer->setPosition(processSlider->value() * 1000);
+        MusicPlayer::instance().setPosition(processSlider->value() * 1000);
 }
 void ControlBar::switchvolume()
 {
@@ -564,21 +575,25 @@ void ControlBar::onSetSpeed(){
         speed = 0.5;
         btspeed->setIcon(QIcon(":/asset/image/0.5xspeed.PNG"));
         VideoPlayer::instance()->setSpeed(speed);
+        MusicPlayer::instance().setSpeed(speed);
 
     } else if (speedstate == 1) {
         speed = 1;
         btspeed->setIcon(QIcon(":/asset/image/1xspeed.PNG"));
         VideoPlayer::instance()->setSpeed(speed);
+        MusicPlayer::instance().setSpeed(speed);
 
     } else if (speedstate == 2) {
         speed = 1.5;
         btspeed->setIcon(QIcon(":/asset/image/1.5xspeed.PNG"));
         VideoPlayer::instance()->setSpeed(speed);
+        MusicPlayer::instance().setSpeed(speed);
 
     } else if (speedstate == 3) {
         speed = 2;
         btspeed->setIcon(QIcon(":/asset/image/2xspeed.PNG"));
         VideoPlayer::instance()->setSpeed(speed);
+        MusicPlayer::instance().setSpeed(speed);
     }
 
 

@@ -1,6 +1,8 @@
 #include "settingsmanager.h"
+
 #include <QFileInfo>
 #include <QDir>
+#include<QHotkey>
 
 SettingsManager* SettingsManager::s_instance = nullptr;
 

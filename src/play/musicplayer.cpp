@@ -440,6 +440,10 @@ void MusicPlayer::setPosition(qint64 position){
 qint64 MusicPlayer::duration(){
     player->duration();
 }
+void MusicPlayer::setSpeed(qreal speed){
+    player->setPlaybackRate(speed);
+
+}
 void MusicPlayer::onMediaChange(QMediaPlayer::MediaStatus state){
     if (state==QMediaPlayer::MediaStatus::LoadedMedia)
     {
