@@ -31,5 +31,24 @@
         <file>asset/qss/musictb_light.qss</file>
         <file>asset/qss/navwidget_dark.qss</file>
         <file>asset/qss/navwidget_light.qss</file>
+        <file>asset/image/0.5xspeed_dark.PNG</file>
+        <file>asset/image/1xspeed_dark.PNG</file>
+        <file>asset/image/2xspeed_dark.PNG</file>
+        <file>asset/image/1.5xspeed_dark.PNG</file>
+        <file>asset/image/fscreen_dark.PNG</file>
+        <file>asset/image/fvolume_dark.PNG</file>
+        <file>asset/image/loop_dark.png</file>
+        <file>asset/image/music2_dark.PNG</file>
+        <file>asset/image/mscreen_dark.PNG</file>
+        <file>asset/image/next_dark.PNG</file>
+        <file>asset/image/pause_dark.PNG</file>
+        <file>asset/image/previous_dark.PNG</file>
+        <file>asset/image/play_dark.PNG</file>
+        <file>asset/image/queue_dark.png</file>
+        <file>asset/image/settings__dark.PNG</file>
+        <file>asset/image/shuffle_dark.png</file>
+        <file>asset/image/stop_dark.PNG</file>
+        <file>asset/image/video2_dark.PNG</file>
+        <file>asset/image/zvolume_dark.PNG</file>
     </qresource>
 </RCC>

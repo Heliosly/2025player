@@ -9,8 +9,9 @@
 #include <QObject>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include<QJsonArray>
 #include <QSqlError>
-
+#include <QThreadStorage>
 class DataBase : public QObject
 {
 
@@ -25,11 +26,16 @@ public:
     QSqlDatabase db;
     int countLocallist;
     int countHistorylist;
-public:
 
-    
+public:
+    bool rewriteTagsWithList(const QString &url, const QList<QPair<QString, qreal>> &tagsList);
+bool checkUrlExistsInTags(const QString &url);
+    QList<QPair<QString, double>> parseTagsToOrderedList(const QJsonArray& tagsArray);
+QJsonArray getTagsArrayByUrl(const QString &url);
+bool saveTagsFromJson(const QString &url, const QJsonArray &tagsArray);
     void clearTable(const QString &playListName);
     bool createConnection(QString dataBase_Name);
+    bool createTagsTableNotExist() ;
 
     int getListCount(const QString &playListName);
 
@@ -54,7 +60,12 @@ public:
     bool deleteByDirPath(const QString &dirpath, const QString &playListName);
     QList<MetaData>getDataFromLocallistwithHint(int hint, int offset);
 
+QJsonArray toApi(const QString &filePath);
+
 private:
+static QThreadStorage<QSqlDatabase> threadDatabase;
+    // 返回当前线程的数据库连接，如果不存在则新建
+    QSqlDatabase getThreadDatabase();
     DataBase();
     static DataBase *s_instance;
 };

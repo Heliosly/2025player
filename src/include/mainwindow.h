@@ -35,10 +35,12 @@ private:
     QHBoxLayout* LeftHLayout = new QHBoxLayout;
     QMediaPlayer *player = new QMediaPlayer(this);
     QStackedWidget * page;
+     DFrame * recommandPage ;
     MusicTable *music_table;
     SettingPage *settingPage ;
     QWidget*cw2=new QWidget(this);
     QStackedWidget * mainPage;
+    int m_lastPosition=0;
 
     void LoadStyleSheet(QString url);
 

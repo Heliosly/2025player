@@ -88,6 +88,7 @@ private:
     void insertItemToMusicTableFromNewDir(const QString &url, const QString &dir);
 
 signals:
+    void mediaSetted(const QString &dir);
     void mediaListAdd();
     void mediaListSub(const QString &dir);
 signals:

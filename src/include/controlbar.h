@@ -54,6 +54,8 @@ signals:
     void toReturnMediaTable();
 private:
     void ChangeLoopBtIcon();
+
+    bool m_isLight=false;
 public slots:
     void musicStateChange(QMediaPlayer::State state);
     void videoStateChang(QtAV::AVPlayer::State state);
@@ -80,6 +82,7 @@ public slots:
     void handleVolumeDown();
     void onSetSpeed();
 
+    void shiftThemeIcon(bool isLight);
 
 
 

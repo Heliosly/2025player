@@ -28,6 +28,7 @@
      Q_OBJECT
  public:
      MusicTable();
+     QMap<QString,QList<QPair<QString, double>>> musicFavority;
 
      void setThemeType(bool isLight);
      void loadMoreData();
@@ -39,12 +40,14 @@
 
      void setMusicCount(int value);
 
+     bool enableFavorite=1;
      QMap<QString,QList<int>> dirToIndex;
+     QStringList musicUrlList;
      DListView *music_table;
      DListView *video_table;
      DMainWindow*window;
-TableItemDelegate *delegate;
-normalItemDelegate *normalDelegate;
+     TableItemDelegate *delegate;
+     normalItemDelegate *normalDelegate;
 
      DListView *historyTable;
      QPushButton *playAll;
@@ -94,7 +97,7 @@ normalItemDelegate *normalDelegate;
 
  private:
      bool isLightTheme;
-
+void updateUserVec(const QString &url);
   const int MAX_HISTORY = 100; // 限制历史记录数量
      void localMusicLayout();
      void initLayout();

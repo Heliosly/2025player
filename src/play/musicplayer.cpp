@@ -31,11 +31,15 @@ void MusicPlayer::play(const QString& url){
         player->stop();
         player->setMedia(QUrl::fromLocalFile(url));
         player->play();
+        mediaSetted(url);
+
     }
     else{
         DataBase::instance()->deleteByUrl(QStringList{url},locallist);
 
         DataBase::instance()->deleteByUrl(QStringList{url},historylist);
+
+        DataBase::instance()->deleteByUrl(QStringList{url},"tags_table");
     }
 
 }

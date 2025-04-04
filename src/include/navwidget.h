@@ -15,6 +15,9 @@ public:
     DListView *ListView1;
 
     void LoadStyleSheet(QString url);
+
+    QStandardItemModel *model ;
+    void shiftTheme(bool isLight);
 };
 class LabelItemDelegate : public QStyledItemDelegate {
 public:

@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include"uservector.h"
 #include"shortcutmanager.h"
 #include"videoplayer.h"
 #include<QVBoxLayout>
@@ -38,6 +39,15 @@ MainWindow::MainWindow()
 
     music_table = new MusicTable();
 
+     recommandPage = new DFrame (this);
+    PieChartWidget * userChart= new PieChartWidget(UserPreference::instance()->m_vector,recommandPage);
+
+     UserPreference::instance()->temp=userChart;
+     QHBoxLayout * recommandLayout = new QHBoxLayout();
+    recommandPage->setLayout(recommandLayout);
+   recommandLayout->addWidget(userChart);
+
+
     bar->setSeparatorVisible(false);
     bar->setSwitchThemeMenuVisible(true);
     bar->setFixedHeight(90);
@@ -59,8 +69,10 @@ MainWindow::MainWindow()
     page = new QStackedWidget(this);
     mainPage=new QStackedWidget(this);
 
+
     page->addWidget(music_table);
     page->addWidget(settingPage);
+    page->addWidget(recommandPage);
     RightHLayout->addWidget(page);
 
     cw->setLayout(MainVLayout);
@@ -157,6 +169,10 @@ this->setStyleSheet("");  // 先清空
 
         this->LoadStyleSheet("/home/SonnyBoy/Desktop/1.qss");
         music_table->setThemeType(1);
+        cbar->shiftThemeIcon(1);
+
+        Navw->shiftTheme(1);
+
     }else {
 
         music_table->LoadStyleSheet(":/asset/qss/musictb_dark.qss");
@@ -170,6 +186,9 @@ this->setStyleSheet("");  // 先清空
         this->LoadStyleSheet("/home/SonnyBoy/Desktop/2.qss");
 
         music_table->setThemeType(0);
+
+        cbar->shiftThemeIcon(0);
+        Navw->shiftTheme(0);
     }
 }
 
@@ -179,9 +198,18 @@ void MainWindow::currentchange(const QModelIndex &current,const QModelIndex &pre
     int row=current.row();
 
 
-    if(page->currentIndex()==1){
+    if(page->currentIndex()!=1){
         page->setCurrentIndex(0);
+        m_lastPosition=-1;
     }
+    if(row==0)
+         {
+
+        page->setCurrentIndex(2);
+
+       m_lastPosition=0;
+    }
+    else
     if (row==2)
     {
         music_table->page->setCurrentIndex(0);
@@ -190,15 +218,20 @@ void MainWindow::currentchange(const QModelIndex &current,const QModelIndex &pre
         //        }
         cbar->readVolume("");
         cbar->changePlayer(0);
+
+       m_lastPosition=2;
     }
     else if(row==3){
 
         cbar->changePlayer(1);
         music_table->page->setCurrentIndex(1);
         //video
+
+       m_lastPosition=3;
     }
     else if (row==4){
         music_table->page->setCurrentIndex(2);
+       m_lastPosition=4;
     }
 
 }
@@ -228,6 +261,8 @@ void MainWindow::LoadStyleSheet( QString url)
 }
 
 void MainWindow::onAppAboutToQuit() {
+UserPreference::instance()->reWrite();
+
 
 }
 
@@ -262,7 +297,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     }
     QMainWindow::keyPressEvent(event);
 }
-
 
 
 

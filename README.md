@@ -15,4 +15,10 @@ cd qtavbuild
 qmake ../QtAV.pro
 make -j$(nproc)
 sudo make install
+
+git clone https://github.com/Skycoder42/QHotkey.git
+ cd QHotkey
+ cmake -B build -S . -DQT_DEFAULT_MAJOR_VERSION=5
+ cmake --build build
+sudo cmake --install build
 ```

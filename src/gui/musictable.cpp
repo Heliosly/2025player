@@ -1,4 +1,5 @@
 #include <QFileIconProvider>
+#include"uservector.h"
 #include"videoplayer.h"
 #include "pathselector.h"
 #include "musictable.h"
@@ -16,6 +17,8 @@
 #include <QListWidget>
 #include <QMouseEvent>
 #include <QStringListModel>
+#include<QtConcurrent>
+
 MusicTable::MusicTable()
 {
     this->setObjectName("localmusic");
@@ -23,6 +26,7 @@ MusicTable::MusicTable()
     initSource();
     initItem();
     initLayout();
+    enableFavorite=true;
 
     connect(DGuiApplicationHelper::instance(), &DGuiApplicationHelper::themeTypeChanged, this, &MusicTable::setTheme);
     connect(playAll, &DPushButton::clicked, this, &MusicTable::onBtPlayAll);
@@ -40,6 +44,16 @@ MusicTable::MusicTable()
 
     connect(video_table,&DListView::doubleClicked,this,&MusicTable::videoplay);
     connect(this,&MusicTable::toResizeWidget,this,&MusicTable::onResetWindowSize);
+    connect(&MusicPlayer::instance(),&MusicPlayer::mediaSetted,this,&MusicTable::updateUserVec);
+
+}
+void MusicTable::updateUserVec(const QString &url){
+    if(musicFavority.contains(url))
+    UserPreference::instance()->update(musicFavority[url],0.5);
+
+    else{
+        qDebug()<<url<<"尚未提取标签";
+    }
 
 }
 void MusicTable::deleteByDir(const QString &dir){
@@ -74,11 +88,15 @@ void MusicTable::loadMoreData()
     }
     m_loading = true;
 
-    // 获取新数据
+
     QList<MetaData> dataList = DataBase::instance()->getDataFromLocallistwithHint(m_currentHint, qMin(m_loadCount,m_totalRows-m_currentHint));
     if (dataList.isEmpty()) {
         m_loading = false;
         m_loaded=true;
+
+
+
+
         qDebug() << "No more data to load maybe load all data";
         return;
     }
@@ -89,6 +107,18 @@ void MusicTable::loadMoreData()
 
         addMusic(music);
     }
+   if(enableFavorite)
+      QtConcurrent::run([this]() {
+          if (musicUrlList.size() > 0) {
+              // 可以安全地进行删除操作
+              for (int i = musicUrlList.size() - 1; i >= 0; --i) {
+                  auto a = DataBase::instance()->toApi(musicUrlList.at(i));
+                  musicFavority[musicUrlList.at(i)] = DataBase::instance()->parseTagsToOrderedList(a);
+                  musicUrlList.removeAt(i);
+              }
+          }
+      }
+);
 
     m_currentHint += dataList.size();
     m_loading = false;
@@ -338,7 +368,7 @@ void MusicTable::playMusicFromIndex(int index){
 void MusicTable::addMusic(const MetaData &music)
 {
 
-    int minutes = music.duration / 60;
+       int minutes = music.duration / 60;
     int seconds = music.duration % 60;
 
 
@@ -417,6 +447,7 @@ void MusicTable::addMusic(const MetaData &music)
         dirToIndex[dirpath] = QList<int>();
     }
     dirToIndex[dirpath].append(row);
+    musicUrlList.append(music.url);
 }
 
 void MusicTable::onBtPlayAll()
