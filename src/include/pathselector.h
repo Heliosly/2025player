@@ -7,11 +7,8 @@
 #include <QWidget>
 #include <QString>
 #include <QMenu>
-
-
 #include <DPushButton>
 #include <DMenu>
-
 #include <QCoreApplication>
 #include<QDir>
 DWIDGET_USE_NAMESPACE

@@ -12,7 +12,7 @@ ShortcutManager* ShortcutManager::instance() {
 }
 
 ShortcutManager::ShortcutManager(QObject *parent) : QObject(parent) {
-    QStringList actionNames = {"播放/暂停", "切换循环模式", "下一曲", "上一曲", "音量加", "音量减"};
+    QStringList actionNames = {"播放|暂停", "切换循环模式", "下一曲", "上一曲", "音量加", "音量减"};
 
     // 为每个动作创建一个 QHotkey 对象（初始不设置快捷键）
     for (const QString &name : actionNames) {
@@ -22,7 +22,7 @@ ShortcutManager::ShortcutManager(QObject *parent) : QObject(parent) {
 
 
     // 连接 QHotkey 的 activated 信号到对应槽
-    connect(hotkeys["播放/暂停"], &QHotkey::activated, this, &ShortcutManager::playTriggered);
+    connect(hotkeys["播放|暂停"], &QHotkey::activated, this, &ShortcutManager::playTriggered);
     connect(hotkeys["切换循环模式"], &QHotkey::activated, this, &ShortcutManager::switchLoopTriggered);
     connect(hotkeys["下一曲"], &QHotkey::activated, this, &ShortcutManager::nextTriggered);
     connect(hotkeys["上一曲"], &QHotkey::activated, this, &ShortcutManager::previousTriggered);
@@ -32,7 +32,7 @@ ShortcutManager::ShortcutManager(QObject *parent) : QObject(parent) {
 
 void ShortcutManager::setupDefaultShortcuts() {
     QMap<QString, QKeySequence> defaults = {
-        {"播放/暂停", QKeySequence("Ctrl+P")},
+        {"播放|暂停", QKeySequence("Ctrl+P")},
         {"切换循环模式", QKeySequence("Ctrl+Space")},
         {"下一曲", QKeySequence("Ctrl+Up")},
         {"上一曲", QKeySequence("Ctrl+Down")},

@@ -24,19 +24,17 @@ public:
         void operator=(const DataBase&) = delete;
 
     QSqlDatabase db;
-    int countLocallist;
-    int countHistorylist;
 
 public:
     bool rewriteTagsWithList(const QString &url, const QList<QPair<QString, qreal>> &tagsList);
 bool checkUrlExistsInTags(const QString &url);
-    QList<QPair<QString, double>> parseTagsToOrderedList(const QJsonArray& tagsArray);
+QList<QPair<QString, double>> parseTagsToOrderedList(const QJsonArray& tagsArray);
 QJsonArray getTagsArrayByUrl(const QString &url);
 bool saveTagsFromJson(const QString &url, const QJsonArray &tagsArray);
     void clearTable(const QString &playListName);
     bool createConnection(QString dataBase_Name);
     bool createTagsTableNotExist() ;
-
+    MetaData getMetaDataByUrl(const QString &url);
     int getListCount(const QString &playListName);
 
 

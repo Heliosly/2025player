@@ -18,7 +18,7 @@
 #include <QMouseEvent>
 #include <QStringListModel>
 #include<QtConcurrent>
-
+#include<DMessageManager>
 MusicTable::MusicTable()
 {
     this->setObjectName("localmusic");
@@ -36,15 +36,35 @@ MusicTable::MusicTable()
     connect(&MusicPlayer::instance(), &MusicPlayer::mediaListAdd, this, &MusicTable::resetMusicTable,Qt::QueuedConnection);
     connect(SettingsManager::instance(), &SettingsManager::pathChange, this, &MusicTable::resetVideoTable);
     connect(&MusicPlayer::instance(),&MusicPlayer::historyListChange,this,&MusicTable::addHistoryItem);
-    connect(&MusicPlayer::instance(),&MusicPlayer::historyListRemove,this,&MusicTable::loadHistoryTable);
+
+    connect(VideoPlayer::instance(),&VideoPlayer::historyListChange,this,&MusicTable::addHistoryItem);
+    connect(&MusicPlayer::instance().history,&HistoryList::historyListRemove,this,&MusicTable::loadHistoryTable,Qt::QueuedConnection);
     connect(&MusicPlayer::instance(), &MusicPlayer::musicToMusictable,
             this, &MusicTable::addMusic, Qt::QueuedConnection);
     connect(&MusicPlayer::instance(),&MusicPlayer::mediaListSub,this,&MusicTable::deleteByDir,Qt::QueuedConnection);
     connect(music_table,&DListView::doubleClicked,this,&MusicTable::onLocalListItemDoubleClicked);
 
     connect(video_table,&DListView::doubleClicked,this,&MusicTable::videoplay);
-    connect(this,&MusicTable::toResizeWidget,this,&MusicTable::onResetWindowSize);
     connect(&MusicPlayer::instance(),&MusicPlayer::mediaSetted,this,&MusicTable::updateUserVec);
+
+    connect(this, &MusicTable::mediaDeletedByDir,this,&MusicTable::deleteHistoryByDir);
+    connect(historyTable,&DListView::doubleClicked,this,&MusicTable::onHistoryListItemDoubleClicked);
+}
+void MusicTable::deleteHistoryByDir(const QString &dir){
+
+
+    auto &list = MusicPlayer::instance().history.history;
+         for (int i = list.size() - 1; i >= 0; --i) {
+        QFileInfo fileInfo(list[i].url);
+        QString dirPath = fileInfo.absolutePath();
+        if (dirPath == dir) {
+            list.removeAt(i);
+        }
+    }
+
+       MusicPlayer::instance().history.sendHistoryRemove();
+
+
 
 }
 void MusicTable::updateUserVec(const QString &url){
@@ -56,7 +76,9 @@ void MusicTable::updateUserVec(const QString &url){
     }
 
 }
+///整合了所有部分的删除
 void MusicTable::deleteByDir(const QString &dir){
+    cancelTask();
     auto &dirIndex=dirToIndex[dir];
     int n=dirIndex.size();
     if(dirIndex.empty()){
@@ -64,6 +86,26 @@ void MusicTable::deleteByDir(const QString &dir){
         return;
     }
 
+
+
+    std::sort(dirIndex.begin(), dirIndex.end(), std::greater<int>());
+    for(auto i:dirIndex){
+        emit mediaDeletedByDir(musicUrlListAll[i]);
+
+        qDebug()<<"i:"<<i;
+        if(musicUrlList.contains(musicUrlListAll[i])){
+          musicUrlList.removeAt(i);
+        }
+
+          musicUrlListAll.removeAt(i);
+
+
+    }
+    if(musicUrlListAll.empty()){
+        haveMusic=0;
+        if(UserPreference::instance()->temp)
+        UserPreference::instance()->temp->setDefaultLabeltText("无音乐");
+    }
     int end=*dirIndex.rbegin();
     for (auto row  = dirIndex.rbegin(); row != dirIndex.rend(); ++row) {
         QStandardItem *item = musicListModel->takeItem(*row);  // 从模型中取出项
@@ -78,7 +120,12 @@ void MusicTable::deleteByDir(const QString &dir){
                 i-=n;
             }
     }
+
+ qDebug()<<"trace2";
     dirToIndex.remove(dir);
+    resetVideoTable();
+
+
 }
 
 void MusicTable::loadMoreData()
@@ -93,35 +140,28 @@ void MusicTable::loadMoreData()
     if (dataList.isEmpty()) {
         m_loading = false;
         m_loaded=true;
-
-
-
-
         qDebug() << "No more data to load maybe load all data";
         return;
     }
 
 
 
+    bool temp = haveMusic;
     for (const MetaData &music : dataList) {
 
         addMusic(music);
+        haveMusic=1;
+
     }
-   if(enableFavorite)
-      QtConcurrent::run([this]() {
-          if (musicUrlList.size() > 0) {
-              // 可以安全地进行删除操作
-              for (int i = musicUrlList.size() - 1; i >= 0; --i) {
-                  auto a = DataBase::instance()->toApi(musicUrlList.at(i));
-                  musicFavority[musicUrlList.at(i)] = DataBase::instance()->parseTagsToOrderedList(a);
-                  musicUrlList.removeAt(i);
-              }
-          }
-      }
-);
+    if(temp^haveMusic){
+         if(UserPreference::instance()->temp)
+
+        UserPreference::instance()->temp->setDefaultLabeltText("等待加载中");
+    }
 
     m_currentHint += dataList.size();
     m_loading = false;
+    toApi();
 }
 
 void MusicTable::onScrollValueChanged(int value)
@@ -142,6 +182,7 @@ void MusicTable::setMusicCount(int value)
 {
     music_table->verticalScrollBar()->setValue(value);
     m_totalRows=value;
+    qDebug()<<"m_totleRows:"<<value;
 }
 void MusicTable::initSource(){
     pathSelector = new PathSelector(this);
@@ -157,8 +198,7 @@ void MusicTable::initItem()
     delegate = new TableItemDelegate(music_table);
     music_table->setItemDelegate(delegate);
 
-    setMusicCount
-                    (DataBase::instance()->getListCount("locallist"));
+    setMusicCount (DataBase::instance()->getListCount("locallist"));
     setLoadParameters(0, 50); // 每次加载 50 行
     QList<QString> tableList; //
 
@@ -180,7 +220,7 @@ void MusicTable::initItem()
     // 设置垂直滚动条最小宽度
     music_table->verticalScrollBar()->setMaximumWidth(7);
     music_table->setResizeMode(QListView::Adjust);
-    if(DataBase::instance()->countLocallist)loadMoreData();
+    if(m_totalRows)loadMoreData();
     else {
         m_loaded=true;
     }
@@ -191,6 +231,7 @@ void MusicTable::initItem()
 
     video_table->setViewMode(QListView::IconMode);
     video_table->setOrientation(QListView::Flow::LeftToRight,1);
+    video_table->setResizeMode(QListView::Adjust); // ✅ 关键，让内容从左开始排
     video_table->setIconSize(QSize(100, 100));
     video_table->setGridSize(QSize(200, 200));
     video_table->setSpacing(10);
@@ -206,13 +247,20 @@ void MusicTable::initItem()
 
     video_table->setModel(videoListModel);
 
-    historyTable = new HistoryTable();
-    historyTable->setParent(this);
+    historyTable = new DListView();
+
+
+    historyTable->setToolTip("历史播放");
+
+    historyTable->setIconSize(QSize(60, 60));
     historyListModel = new QStandardItemModel(this);
+    historyTable->setUniformItemSizes(true);  // 启用统一 item 大小
+    historyTable->setGridSize(QSize(historyTable->width(),80 ));
+    historyTable->setSpacing(20);
+
     historyTable->setModel(historyListModel);
 
     historyTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    historyTable->setSpacing(10);
     loadHistoryTable();
 
     playAll = new QPushButton(this);
@@ -224,10 +272,22 @@ void MusicTable::loadHistoryTable() {
     auto &history = MusicPlayer::instance().history;
     historyListModel->clear();
 
+    bool temp=0;
     for(const auto &item : history.history) {
-        QStandardItem *newItem = new QStandardItem(QIcon(":/asset/image/video2.PNG"), item.title);
+
+        DStandardItem *newItem = new DStandardItem(item.icon, item.title);
+    newItem->setData(item.isVideo,Qt::UserRole+1);
+
+    newItem->setData(item.url,Qt::UserRole+2);
+
+    newItem->setSizeHint(QSize(0,80));
         historyListModel->appendRow(newItem);
+        temp=1;
     }
+    haveHistory=temp;
+    if(haveHistory==0){
+    }
+
 
 }
 
@@ -236,9 +296,16 @@ void MusicTable::onHistoryListRemove(int index){
 }
 // 添加新的历史记录项目
 void MusicTable::addHistoryItem(const HistoryMData& item) {
-    QStandardItem *newItem = new QStandardItem(QIcon(":/asset/image/video2.PNG"), item.title);
+    
+    DStandardItem *newItem = new DStandardItem(item.icon ,item.title);
 
+    newItem->setData(item.isVideo,Qt::UserRole+1);
+
+    newItem->setData(item.url,Qt::UserRole+2);
+    newItem->setSizeHint(QSize(0,80));
     historyListModel->insertRow(0, newItem);
+    haveHistory=1;
+
 
 
 }
@@ -247,6 +314,7 @@ void MusicTable::loadVideoTable()
     // 使用 Lambda 读取文件并添加到 video_table
     auto addVideoItems = [&](QFileInfoList files)
     {
+        bool temp=0;
         for (const QFileInfo &fileInfo : files)
         {
             // 获取文件图标
@@ -258,14 +326,18 @@ void MusicTable::loadVideoTable()
                 icon = QIcon(":/asset/image/video2.PNG"); // 使用默认图标路径
             }
 
-            QStandardItem *item = new QStandardItem(icon, fileInfo.fileName());
+            DStandardItem *item = new DStandardItem(icon, fileInfo.fileName());
             item->setData(fileInfo.absoluteFilePath(),Qt::UserRole+1);
             item->setSizeHint(QSize(140,140));
 
             videoListModel->appendRow(item);
+           temp=1;
         }
+
+           return temp;
     };
 
+    bool temp=0;
     for (const QString &mediaPath : SettingsManager::instance()->paths)
     {
         QDir dir(mediaPath);
@@ -274,8 +346,10 @@ void MusicTable::loadVideoTable()
 
         QStringList filters = {"*.mp4", "*.avi", "*.mkv", "*.mov", "*.flv", "*.wmv"};
         QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files);
-        addVideoItems(fileList);
+      temp|=addVideoItems(fileList);
+
     }
+    haveVideo=temp;
 }
 void MusicTable::clearMusicTable()
 {
@@ -348,7 +422,6 @@ void MusicTable::initLayout()
     page = new QStackedWidget(this);
     page->addWidget(music_table);
     page->addWidget(video_table);
-    page->addWidget(historyTable);
     VLayout->addWidget(page);
     // VLayout->setContentsMargins(0,0,0,0);
     VLayout->setStretch(0, 1);
@@ -360,11 +433,107 @@ void MusicTable::initLayout()
 void MusicTable::playMusicFromIndex(int index){
     QModelIndex Index = musicListModel->index(index, 0);
 
+    if(!Index.isValid()){
+        qDebug()<<"[playMusicFromIndex]play "<<index<<"is not valid";
+    }
     music_table->setCurrentIndex(Index );
     MusicPlayer::instance().play( Index.data(Qt::UserRole + 5).toString());
 
 
+
 }
+
+void MusicTable::videoplay(const QModelIndex &index ){
+
+   VideoPlayer::instance()->stop();
+    VideoPlayer::instance()->play( index.data(Qt::UserRole + 1).toString());
+    m_VideoPre=index.row();
+
+        emit mediaChange();
+
+
+}
+
+void MusicTable::playVideoFromIndex(int index){
+
+
+    VideoPlayer::instance()->stop();
+    if(index!=m_VideoPre){
+    QModelIndex Index = videoListModel->index(index, 0);
+
+    if(!Index.isValid())
+
+        qDebug()<<"[playVideoFromIndex]play "<<index<<"is not valid";
+    video_table->setCurrentIndex(Index);
+    VideoPlayer::instance()->stop();
+    VideoPlayer::instance()->play( Index.data(Qt::UserRole + 1).toString());
+    m_VideoPre=index;
+
+        emit mediaChange();
+    }
+
+
+}
+
+void MusicTable::playMediaFromIndexInHistory(QModelIndex index){
+
+    if(!index.isValid())
+
+
+        qDebug()<<"playMediaFromIndexInHistory]play "<<index.row()<<"is not valid";
+
+     if(m_historyPre == index.row())
+    {
+       return ;
+    }
+
+ m_historyPre=index.row();
+
+  bool isVideo =index.data(Qt::UserRole + 1).toBool();
+
+  QString url =index.data(Qt::UserRole + 2).toString();
+  if(isVideo){
+      VideoPlayer::instance()->play(url);
+
+  }
+  else
+
+
+    MusicPlayer::instance().play(url);
+}
+
+//void HistoryTable::musicPlay()
+//{
+//    MusicPlayer::instance().play(url);
+//}
+
+void MusicTable::onLocalListItemDoubleClicked(const QModelIndex &index ){
+    QString musicUrl =index.data(Qt::UserRole + 5).toString();
+    MusicPlayer::instance().play(musicUrl);
+}
+
+void  MusicTable:: onHistoryListItemDoubleClicked(const QModelIndex &index ){
+      if(m_historyPre == index.row())
+    {
+       return ;
+    }
+
+ m_historyPre=index.row();
+
+  bool isVideo =index.data(Qt::UserRole + 1).toBool();
+
+  QString url =index.data(Qt::UserRole + 2).toString();
+  if(isVideo){
+      VideoPlayer::instance()->play(url);
+
+  }
+  else
+
+
+    MusicPlayer::instance().play(url);
+
+}
+
 void MusicTable::addMusic(const MetaData &music)
 {
 
@@ -448,17 +617,18 @@ void MusicTable::addMusic(const MetaData &music)
     }
     dirToIndex[dirpath].append(row);
     musicUrlList.append(music.url);
+    musicUrlListAll.append(music.url);
 }
 
 void MusicTable::onBtPlayAll()
 {
-
-    QStandardItem *firstItem = musicListModel->item(0, 0);
-    if (firstItem) {
-        QString musicUrl = firstItem->data(Qt::UserRole + 5).toString();
-        MusicPlayer::instance().play(musicUrl);
+    if(page->currentIndex()==0){
+        playMusicFromIndex(0);
     }
-    else qWarning()<<"[MusicTable::onBtPlayAll]:cant get first Item";
+    else{
+        playVideoFromIndex(0);
+    }
+
 
 }void MusicTable::LoadStyleSheet(const QString & url)
 {
@@ -495,11 +665,12 @@ void MusicTable::onResetWindowSize(int width)
 
 
     factor = ((width - 900) * 5 / 18);
+
 }
 
 void MusicTable::onSearchTextChange(QString text)
 {
-    QStandardItemModel *model = qobject_cast<QStandardItemModel *>(music_table);
+    auto model = musicListModel;
     if (!model) return;
 
     for (int i = 0; i < model->rowCount(); ++i) {
@@ -512,10 +683,8 @@ void MusicTable::onSearchTextChange(QString text)
 void MusicTable::resetMusicTable()
 {        
     m_loaded=0;
-    setMusicCount(DataBase::instance()->countLocallist);
-    int width =music_table ->width();
-    width*=1.25;
-    emit toResizeWidget(width);
+    setMusicCount(DataBase::instance()->getListCount("locallist"));
+    emit toResizeWidget();
     resetVideoTable();
 
 
@@ -525,22 +694,10 @@ void MusicTable::resetVideoTable()
 {
     clearVideoTable();
     loadVideoTable();
-}
 
-void HistoryTable::mouseDoubleClickEvent(QMouseEvent *event)
-{
+ qDebug()<<"trace3";
+//    checkIsEmpty();
 
-    this->musicPlay();
-}
-void HistoryTable::musicPlay()
-{
-    MusicPlayer::instance().play(url);
-}
-
-void MusicTable::onLocalListItemDoubleClicked(const QModelIndex &index ){
-    QStandardItem *item = musicListModel->itemFromIndex(index);
-    QString musicUrl =item->data(Qt::UserRole + 5).toString();
-    MusicPlayer::instance().play(musicUrl);
 }
 
 void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const  {
@@ -562,6 +719,7 @@ void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
     int dataBColWidth       = 200 + factor;
     int dataCColWidth       = option.rect.width() - (numColWidth + iconColWidth + textAndDataAColWidth + dataBColWidth);
 
+//    qDebug()<<"Bcol="<<dataBColWidth;
     // 构造各列区域
     QRect rectNum(option.rect.x(), option.rect.y(), numColWidth, option.rect.height());
     QRect rectIcon(rectNum.right() + 20, option.rect.y(), iconColWidth, option.rect.height());
@@ -665,27 +823,8 @@ void TableItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
     painter->drawText(rectDataC, Qt::AlignCenter, dataC);
 
     painter->restore();
-}
-
-void MusicTable::videoplay(const QModelIndex &index ){
-
- QStandardItem *item = videoListModel->itemFromIndex(index);
-    QString url =item->data(Qt::UserRole + 1).toString();
-
-
-    VideoPlayer::instance()->play(url);
-    emit videoPlaying();
-}
-
-void MusicTable::playVideoFromIndex(int index){
-
-    QModelIndex Index = videoListModel->index(index, 0);
-
-    video_table->setCurrentIndex(Index);
-    VideoPlayer::instance()->play( Index.data(Qt::UserRole + 1).toString());
 
 }
-
 void MusicTable::setThemeType(bool isLight){
     isLightTheme=isLight;
     delegate->isLight=isLightTheme;
@@ -751,4 +890,94 @@ void normalItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
 
     painter->restore();
     QStyledItemDelegate::paint(painter, option, index);
+}
+///不一定正确
+void MusicTable::checkIsEmpty(){
+    if(musicListModel->rowCount()==0){
+        haveMusic=0;
+    }
+    if(videoListModel->rowCount()==0){
+        haveVideo=0;
+
+    }
+    if(historyListModel->rowCount()==0){
+        haveHistory=0;
+    }
+
+
+}
+// MusicTable.cpp
+void MusicTable::toApi() {
+    if (!enableFavorite) return;
+
+    // 重置终止标志
+    {
+        QMutexLocker locker(&m_mutex);
+        m_abort = false;
+    }
+
+    // 使用QFuture保存任务句柄
+    m_future = QtConcurrent::run([this]() {
+        QMutexLocker locker(&m_mutex);
+        if (musicUrlList.isEmpty()) return;
+
+        // 遍历时使用临时副本防止迭代器失效
+        auto tempList = musicUrlList;
+        musicUrlList.clear();
+        for (const auto& url : tempList) {
+            // 检查终止标志
+            {
+                QMutexLocker locker(&m_mutex);
+                if (m_abort) break;
+            }
+
+            // API请求
+            auto a = DataBase::instance()->toApi(url);
+              {
+                QMutexLocker locker(&m_mutex);
+                if (m_abort) break;
+            }
+
+            if (a.isEmpty()) {
+                QMetaObject::invokeMethod(this, [this]() {
+                    DMessageManager::instance()->sendMessage(
+                        this,
+                        style()->standardIcon(QStyle::SP_MessageBoxWarning),
+                        "识曲api请求失败，已关闭喜好模式"
+                    );
+                    enableFavorite = false;
+                }, Qt::QueuedConnection);
+                continue;
+            }
+
+            // 数据处理
+            auto features = DataBase::instance()->parseTagsToOrderedList(a);
+            musicFavority[url] = features;
+            UserPreference::instance()->cosineSimilarity(features, url);
+        }
+
+        // 完成后通知（仅当未中断时）
+        QMetaObject::invokeMethod(this, [this]() {
+            if (!m_abort) {
+                UserPreference::instance()->emitLoadSomeMusicMedia();
+                emit toRefreshRecommand();
+            }
+        }, Qt::QueuedConnection);
+    });
+
+    // 连接完成信号
+    connect(&m_watcher, &QFutureWatcher<void>::finished, this, [this]() {
+        qDebug() << "Task completed or canceled";
+    });
+    m_watcher.setFuture(m_future);
+}
+
+void MusicTable::cancelTask() {
+    {
+        QMutexLocker locker(&m_mutex);
+        m_abort = true;
+    }
+
+      // 清理已处理数据（根据需求决定）
+    musicUrlList.clear();
 }

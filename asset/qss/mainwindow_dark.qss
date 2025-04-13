@@ -18,7 +18,22 @@ padding: 10px;
 
 
 
-DFrame{
+#historyFrame{
+     border-radius: 40px;
+     border:  none;
+
+background-color: #383838;
+
+}
+
+#recommandFrame{
+     border-radius: 40px;
+     border:  none;
+
+background-color: #383838;
+
+}
+#History_Empty_Frame{
      border-radius: 40px;
      border:  none;
 

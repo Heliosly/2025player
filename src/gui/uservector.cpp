@@ -1,10 +1,14 @@
 #include "uservector.h"
+
+#include"database.h"
 #include <QDebug>
 #include <cmath>
 #include <QtCharts/QChartView>
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QPieSlice>
-#include"database.h"
+#include<QVector>
+
+QT_CHARTS_USE_NAMESPACE
 // 定义50个标签的顺序列表
 
 UserPreference* UserPreference::s_instance = nullptr;
@@ -22,8 +26,8 @@ const QVector<QString> UserPreference::s_tagList = {
 };
 
 // 帮助函数：建立标签到索引的映射
- std::map<QString, int> UserPreference::createTagMapping() {
-    std::map<QString, int> mapping;
+QMap<QString, int> UserPreference::createTagMapping() {
+    QMap<QString, int>mapping;
     for (int i = 0; i < UserPreference::s_tagList.size(); ++i) {
         mapping[s_tagList[i]] = i;
     }
@@ -31,10 +35,10 @@ const QVector<QString> UserPreference::s_tagList = {
 }
 
 // 定义静态成员 s_tagToIndex
-const std::map<QString, int> UserPreference::s_tagToIndex = createTagMapping();
+const QMap<QString, int> UserPreference::s_tagToIndex = createTagMapping();
 
 UserPreference::UserPreference() {
-    // 初始化用户向量为50维全0向量
+       // 初始化用户向量为50维全0向量
     if(!DataBase::instance()->checkUrlExistsInTags("_user")){
 
     m_vector.fill(0.0, 50);
@@ -77,7 +81,7 @@ QVector<qreal> UserPreference::musicTagsToVector(const QList<QPair<QString, qrea
         qreal confidence = top10Tags[i].second; // 置信度（整数值）
         auto it = s_tagToIndex.find(tag);
         if (it != s_tagToIndex.end()) {
-            int idx = it->second;
+            int idx =  it.value();
             vec[idx] = confidence;
         }
     }
@@ -103,7 +107,7 @@ void UserPreference::update(const QList<QPair<QString, qreal>>& top10Tags, qreal
     }
 }
 
-qreal UserPreference::cosineSimilarity(const QList<QPair<QString, qreal>>& candidateTop10Tags) const {
+qreal UserPreference::cosineSimilarity(const QList<QPair<QString, qreal>>& candidateTop10Tags,const QString &url)  {
     // 将候选音乐的top10标签转换为向量
     QVector<qreal> candidate_vector = musicTagsToVector(candidateTop10Tags);
 
@@ -127,6 +131,9 @@ qreal UserPreference::cosineSimilarity(const QList<QPair<QString, qreal>>& candi
     }
     normUser = std::sqrt(normUser);
     if (normUser == 0.0 || normCandidate == 0.0) return 0.0;
+    similarity.push(qMakePair(url, dot / (normUser * normCandidate)));
+
+
 
     return dot / (normUser * normCandidate);
 }
@@ -156,16 +163,23 @@ PieChartWidget::PieChartWidget(const QVector<qreal>& m_vector, QWidget* parent)
     m_chart = new QChart();
     m_chart->setMargins(QMargins(10, 10, 10, 10));
     m_chart->legend()->hide();
+    defaultLabel = new DLabel();
+    defaultLabel ->setText("尚未播放过音乐");
+    QFont font;
+      font.setFamily("Noto Sans CJK SC");  // 设置字体家族
+            font.setPointSize(24);  // 设置字体大小
+            defaultLabel->setFont(font);
 
     m_chartView = new QChartView(m_chart);
     m_chartView->setRenderHint(QPainter::Antialiasing);
 
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout = new QStackedLayout(this);
     layout->addWidget(m_chartView);
+    layout ->addWidget(defaultLabel);
     setLayout(layout);
 
     // 根据初始数据生成图表
-    updateChart(m_vector);
+       updateChart(m_vector);
 }
 
 // 新方法：传入新的 m_vector 数据，更新图表内容
@@ -180,6 +194,7 @@ void PieChartWidget::updateChart(const QVector<qreal>& m_vector)
         tagValues.append(qMakePair(UserPreference::instance()-> s_tagList[i], m_vector[i]));
     }
 
+    int ct=10;
     // 按数值降序排序
     std::sort(tagValues.begin(), tagValues.end(),
               [](const QPair<QString, qreal>& a, const QPair<QString, qreal>& b) {
@@ -188,15 +203,33 @@ void PieChartWidget::updateChart(const QVector<qreal>& m_vector)
 
     // 将第11个及以后的数据合并为“Other”
     double otherSum = 0.0;
-    for (int i = 10; i < tagValues.size(); ++i) {
+       for(int i=0;i<10;i++){
+        if(tagValues[i].second==0.0){
+        ct=i;
+
+        break;
+
+        }
+
+    }
+
+       if(ct <10){
+
+        otherSum=0;
+       }
+       else
+       {
+        for (int i = 10; i < tagValues.size(); ++i) {
         otherSum += tagValues[i].second;
     }
+       }
+
 
     // 创建新的 QPieSeries 对象
     QPieSeries *series = new QPieSeries();
 
     // 添加前 10 个数据切片，并设置颜色渐变（从红到蓝）
-    int sliceCount = qMin(10, tagValues.size());
+    int sliceCount = qMin(ct, tagValues.size());
     for (int i = 0; i < sliceCount; ++i) {
         QPieSlice *slice = series->append(tagValues[i].first, tagValues[i].second);
         slice->setLabelVisible(true);
@@ -226,9 +259,32 @@ void PieChartWidget::updateChart(const QVector<qreal>& m_vector)
 
     // 将新的系列添加到图表中
     m_chart->addSeries(series);
-    m_chart->setTitle("Music Genre Distribution");
+    m_chart->setTitle("Music Likeness Distribution");
 
 
     // 更新视图
     m_chartView->update();
+    if(ct==0){
+        layout->setCurrentIndex(1);
+    }
+    else{
+        layout->setCurrentIndex(0);
+    }
+}
+
+void UserPreference::emitLoadSomeMusicMedia(){
+   emit loadSomeMusicMedia();
+}
+
+void PieChartWidget::changeStackLayout(int index){
+    if(index>1){
+        qDebug()<<"invalid index in changeStackLayout";
+        return ;
+    }
+    this->layout->setCurrentIndex(index);
+}
+
+void PieChartWidget::setDefaultLabeltText(const QString &text){
+    if(defaultLabel)
+    defaultLabel->setText(text);
 }

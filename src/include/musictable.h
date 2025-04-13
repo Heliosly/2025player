@@ -20,6 +20,9 @@
 #include<DLineEdit>
 #include<DMainWindow>
 #include<QStackedWidget>
+#include <QFuture>
+#include <QMutex>
+#include <QFutureWatcher>
  DWIDGET_USE_NAMESPACE
  class CustomListView;  
  class TableItemDelegate;
@@ -27,12 +30,23 @@
  class MusicTable : public DFrame {
      Q_OBJECT
  public:
+
+     bool haveHistory=0;
+     bool haveVideo=0;
+     bool haveRecommand=0;
+     bool haveMusic=0;
      MusicTable();
      QMap<QString,QList<QPair<QString, double>>> musicFavority;
 
+     QStringList musicUrlList;
+
+     QStringList musicUrlListAll;
+
+     QMap<QString,QList<int>> dirToIndex;
+
      void setThemeType(bool isLight);
      void loadMoreData();
-
+void cancelTask();  // 新增中断方法
      void deleteByDir(const QString&dir);
      void onScrollValueChanged(int value);
 
@@ -41,8 +55,6 @@
      void setMusicCount(int value);
 
      bool enableFavorite=1;
-     QMap<QString,QList<int>> dirToIndex;
-     QStringList musicUrlList;
      DListView *music_table;
      DListView *video_table;
      DMainWindow*window;
@@ -53,7 +65,6 @@
      QPushButton *playAll;
      DLineEdit *searchEdit ;
      PathSelector*pathSelector;
-     QHBoxLayout *display_HBoxLayout;
      QStackedWidget *page;
      QVector<CustomListView*> listDlistView;
      DFrame *qf;
@@ -66,14 +77,20 @@
      int m_loadCount;      // 每次加载的条数
      bool m_loading=0;      //防止重复加载
      bool m_loaded=0;
+     int m_historyPre=-1;
+     int  m_VideoPre=-1;
+     // 线程控制相关成员
+         QFuture<void> m_future;
+         QFutureWatcher<void> m_watcher;
+         QMutex m_mutex;
+         bool m_abort = false;
 
-
+     void checkIsEmpty();
      void onResetWindowSize(int width);
 ///Controlbar的上一曲下一曲会经过这里
   void playMusicFromIndex(int index);
+void playMediaFromIndexInHistory(QModelIndex index);
   void playVideoFromIndex(int index);
-  void playMediaFromIndexInHistory(int index);
-
      void LoadStyleSheet(const QString & url);
 
  void   onLocalListItemDoubleClicked(const QModelIndex &index );
@@ -92,10 +109,14 @@
 
  private slots:
      void onBtPlayAll();
+
+void   onHistoryListItemDoubleClicked(const QModelIndex &index );
      // void bt_selectDir();
      void onSearchTextChange(QString text);
 
+void deleteHistoryByDir(const QString &dir);
  private:
+void toApi();
      bool isLightTheme;
 void updateUserVec(const QString &url);
   const int MAX_HISTORY = 100; // 限制历史记录数量
@@ -105,8 +126,13 @@ void updateUserVec(const QString &url);
      void initSource();
 
     signals:
-    void toResizeWidget(int width);
+    void toResizeWidget();
     void videoPlaying();
+    void toRefreshRecommand();
+
+    void mediaChange();
+
+    void mediaDeletedByDir(const QString &url);
  };
 
  ///调整Dlistview项间距
@@ -121,18 +147,7 @@ void updateUserVec(const QString &url);
      bool isLight=0;
      void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
  };
-class HistoryTable : public DListView {
-    Q_OBJECT
-public:
-    QString url;
-    MusicTable *tableWidget;
-    
-    int number;
-    void mouseDoubleClickEvent(QMouseEvent *event);
-
-    void musicPlay();
-};
-class normalItemDelegate : public QStyledItemDelegate {
+ class normalItemDelegate : public QStyledItemDelegate {
 public:
     bool isLight=0;
     normalItemDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}

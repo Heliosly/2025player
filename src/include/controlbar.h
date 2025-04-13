@@ -3,7 +3,7 @@
 #define CONTROLBAR_H
 #include"musicplayer.h"
 #include"musictable.h"
-#include"videoplayer.h"
+#include<QtAV>
 #include<DIconButton>
 #include <DWidget>
 #include<QTimer>
@@ -22,8 +22,11 @@ class ControlBar : public DFrame
 {
     Q_OBJECT
 public:
-    explicit ControlBar(QWidget *parent = nullptr);
+    explicit ControlBar(QWidget *parent = nullptr,bool isVideo=0);
 
+    void connectVideoFc();
+    bool inplay=false;
+    bool inHistory=false;
     bool isVideo = false;
     LoopState loopstate=Loop;
     DIconButton *btplay;
@@ -48,7 +51,7 @@ public:
     int preVolume=100;
     int  currenttime;
     void LoadStyleSheet(const QString & url);
-    void changePlayer(bool temp);
+//    void changePlayer(bool temp);
 void PlaySliderValueReset();
 signals:
     void toReturnMediaTable();
@@ -56,6 +59,7 @@ private:
     void ChangeLoopBtIcon();
 
     bool m_isLight=false;
+    int preVideoUrl=-1;
 public slots:
     void musicStateChange(QMediaPlayer::State state);
     void videoStateChang(QtAV::AVPlayer::State state);
@@ -73,6 +77,7 @@ public slots:
     void switchvolume();
     void readVolume(const QString &filePath);
 
+void onVideoMediaChange();
     void onLoopChange();
     void handlePlay();
     void handleChangeLoop();
@@ -81,6 +86,7 @@ public slots:
     void handleVolumeUp();
     void handleVolumeDown();
     void onSetSpeed();
+    void onStarted();
 
     void shiftThemeIcon(bool isLight);
 

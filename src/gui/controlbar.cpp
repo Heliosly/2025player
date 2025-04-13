@@ -1,14 +1,16 @@
 #include "controlbar.h"
-// #include"videoplayer.h"
+ #include"videoplayer.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <DLabel>
 #include <DIconButton>
 #include <QFile>
 #include <QRandomGenerator>
-ControlBar::ControlBar(QWidget *parent) : DFrame(parent)
+ControlBar::ControlBar(QWidget *parent,bool _isVideo) : DFrame(parent)
 {
 
+    isVideo=_isVideo;
+    this->setMaximumHeight(130);
     this->setObjectName("control_bar");
     btspeed= new DIconButton(this);
     btplay = new DIconButton(this);
@@ -18,6 +20,8 @@ ControlBar::ControlBar(QWidget *parent) : DFrame(parent)
 
     btloop = new DIconButton(btplay);
     btscreen = new DIconButton(btplay);
+
+    if(!isVideo)
 
     btscreen->setDisabled(true);
     currenttime = 0;
@@ -94,6 +98,7 @@ ControlBar::ControlBar(QWidget *parent) : DFrame(parent)
     MainVlayout->addLayout(DownHlayout);
     MainVlayout->setStretch(0, 2);
     MainVlayout->setStretch(1, 1);
+    MainVlayout->setContentsMargins(5,10,5,10);
     UpHlayout->addWidget(playtime);
     UpHlayout->addWidget(processSlider);
     UpHlayout->addWidget(endtime);
@@ -118,11 +123,7 @@ ControlBar::ControlBar(QWidget *parent) : DFrame(parent)
     connect(btpre, &DIconButton::clicked, this, &ControlBar::preslot);
     connect(btstop, &DIconButton::clicked, this, &ControlBar::stopslot);
     connect(btnex, &DIconButton::clicked, this, &ControlBar::nexslot);
-    connect(&MusicPlayer::instance(), &MusicPlayer::stateChanged, this, &ControlBar::musicStateChange);
-    connect(&MusicPlayer::instance(), &MusicPlayer::mediaStatusChanged, this, &ControlBar::musicMediaChange);
 
-    connect(VideoPlayer::instance(), &VideoPlayer::stateChanged, this, &ControlBar::videoStateChang);
-    connect(VideoPlayer::instance(), &VideoPlayer::mediaStatusChanged, this, &ControlBar::videoMediaChange);
     connect(cTimer, &QTimer::timeout, this, &ControlBar::handleTimeout);
     connect(processSlider, &DSlider::valueChanged, this, &ControlBar::sliderchange);
     connect(processSlider, &DSlider::sliderReleased, this, &ControlBar::processsetting);
@@ -130,9 +131,25 @@ ControlBar::ControlBar(QWidget *parent) : DFrame(parent)
     connect(btloop, &DIconButton::clicked, this, &ControlBar::onLoopChange);
 
     connect(btspeed, &DIconButton::clicked, this, &ControlBar::onSetSpeed);
+    if(!isVideo){
+           connect(&MusicPlayer::instance(), &MusicPlayer::stateChanged, this, &ControlBar::musicStateChange);
+    connect(&MusicPlayer::instance(), &MusicPlayer::mediaStatusChanged, this, &ControlBar::musicMediaChange);
+
+    }
 
 
+   }
+void ControlBar::connectVideoFc(){
+     connect(VideoPlayer::instance(), &VideoPlayer::stateChanged, this, &ControlBar::videoStateChang);
+    connect(VideoPlayer::instance(), &VideoPlayer::mediaStatusChanged, this, &ControlBar::videoMediaChange);
     //    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QMediaPlayer::setVolume);
+
+    connect(btscreen, &DIconButton::clicked,VideoPlayer::instance() ,&VideoPlayer::onShiftScreen);
+    volumeSlider->setValue(100);
+
+
+    connect(VideoPlayer::instance(), &VideoPlayer::videoStarted, this, &ControlBar::onStarted);
+
 }
 /// 读取设置之前的音量设置(todo
 void ControlBar::readVolume(const QString &filePath)
@@ -187,42 +204,42 @@ QString formatTime(int timeInSeconds)
     return a;
 }
 
-void ControlBar::changePlayer(bool temp){
-    stopslot();
-    if(m_isLight)
-    btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-    else
+//void ControlBar::changePlayer(bool temp){
+//    stopslot();
+//    if(m_isLight)
+//        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+//    else
 
-    btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
+//        btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
 
 
 
-    currenttime = 0;
+//    currenttime = 0;
 
-    playtime->setText("--.--");
-    endtime->setText("--.--");
-    cTimer->stop();
-    processSlider->setValue(0);
-    if(temp==1){
-        isVideo=1;
-        btscreen->setDisabled(false);
+//    playtime->setText("--.--");
+//    endtime->setText("--.--");
+//    cTimer->stop();
+//    processSlider->setValue(0);
+//    if(temp==1){
+//        isVideo=1;
+//        btscreen->setDisabled(false);
 
-    }
-    else {
-        isVideo=0;
-        btscreen->setDisabled(true);
-    }
+//    }
+//    else {
+//        isVideo=0;
+//        btscreen->setDisabled(true);
+//    }
 
-}
+//}
 void ControlBar::videoStateChang(QtAV::AVPlayer::State state){
 
     if (state == QtAV::AVPlayer::StoppedState)
     {
-    if(m_isLight)
-        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-    else
+        if(m_isLight)
+            btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        else
 
-        btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
+            btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
         currenttime = 0;
 
         playtime->setText("--.--");
@@ -233,11 +250,11 @@ void ControlBar::videoStateChang(QtAV::AVPlayer::State state){
     else if (state == QtAV::AVPlayer::PlayingState)
     {
 
-    if(m_isLight)
-        btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
+        if(m_isLight)
+            btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
 
-    else
-        btplay->setIcon(QIcon(":/asset/image/pause_dark.PNG"));
+        else
+            btplay->setIcon(QIcon(":/asset/image/pause_dark.PNG"));
         if (currenttime)
         {
             cTimer->start();
@@ -246,11 +263,11 @@ void ControlBar::videoStateChang(QtAV::AVPlayer::State state){
     else
     {
 
-    if(m_isLight)
-        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-    else
+        if(m_isLight)
+            btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        else
 
-        btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
+            btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
         cTimer->stop();
     }
 }
@@ -259,12 +276,13 @@ void ControlBar::musicStateChange(QMediaPlayer::State state)
 {
     if (state == QMediaPlayer::StoppedState)
     {
+        inplay=false;
 
-    if(m_isLight)
-        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-    else
+        if(m_isLight)
+            btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        else
 
-        btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
+            btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
         currenttime = 0;
 
         playtime->setText("--.--");
@@ -274,12 +292,13 @@ void ControlBar::musicStateChange(QMediaPlayer::State state)
     }
     else if (state == QMediaPlayer::PlayingState)
     {
+        inplay=true;
 
-    if(m_isLight)
-        btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
+        if(m_isLight)
+            btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
         else
 
-        btplay->setIcon(QIcon(":/asset/image/pause_dark.PNG"));
+            btplay->setIcon(QIcon(":/asset/image/pause_dark.PNG"));
         if (currenttime)
         {
             cTimer->start();
@@ -288,21 +307,44 @@ void ControlBar::musicStateChange(QMediaPlayer::State state)
     else
     {
 
-    if(m_isLight)
-        btplay->setIcon(QIcon(":/asset/image/play.PNG"));
-    else {
+        inplay=false;
+        if(m_isLight)
+            btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        else {
 
-        btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
-    }
+            btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
+        }
         cTimer->stop();
     }
 }
 void ControlBar::playslot()
 {
+      if(inHistory){
+            auto &player = MusicPlayer::instance();
+
+             auto state = player.state();
+    if (state ==QMediaPlayer::State::PlayingState)
+    {
+        player.pause();
+    }
+    else
+    {
+        player.play();
+    }
+    return;
+
+    }
+
+
     if (isVideo)
     {
+
         auto player = VideoPlayer::instance();
-        auto state = player->state();
+        if(player->m_player->mediaStatus()==QtAV::MediaStatus::NoMedia){
+            temp->playVideoFromIndex(0);
+        }
+        else{
+             auto state = player->state();
         if (state == QtAV::AVPlayer::State::PlayingState)
         {
             player->pause();
@@ -312,34 +354,53 @@ void ControlBar::playslot()
             player->play();
         }
         return;
-    }
+
+
+        }
+           }
     auto &player = MusicPlayer::instance();
-
-    if (player.state() == QMediaPlayer::PlayingState)
-    {
-
-        player.pause();
-    }
-    else if(player.state()==QMediaPlayer::StoppedState)
-    {
-
-
-        player.play();
+    if(player.player->mediaStatus()==QMediaPlayer::MediaStatus::NoMedia){
+        temp->playVideoFromIndex(0);
     }
     else{
+
+         auto state = player.state();
+    if (state ==QMediaPlayer::State::PlayingState)
+    {
+        player.pause();
+    }
+    else
+    {
         player.play();
+    }
+    return;
+
+
     }
 }
 void ControlBar::preslot()
 {
+       if(inHistory){
+
+               return;
+//        QModelIndex currentIndex = temp->historyTable->currentIndex();
+
+//            temp->playMediaFromIndexInHistory(currentIndex);
+//               return;
+    }
+
+
     if (isVideo)
     {
+
         QModelIndex currentIndex = temp->video_table->currentIndex();
         int index = currentIndex.row();
         if (index > 0)
         {
             temp->playVideoFromIndex(index - 1);
         }
+
+       onVideoMediaChange();
         return;
     }
     QModelIndex currentIndex = temp->music_table->currentIndex();
@@ -353,16 +414,31 @@ void ControlBar::stopslot()
 {
     if (isVideo)
     {
+
         VideoPlayer::instance()->stop();
-        emit toReturnMediaTable();}
+        VideoPlayer::instance()->closeVideoPage();
+
+    }
 
     else
         MusicPlayer::instance().stop();
 }
 void ControlBar::nexslot()
 {
+    if(inHistory){
+
+               return;
+        QModelIndex currentIndex = temp->historyTable->currentIndex();
+
+            temp->playMediaFromIndexInHistory(currentIndex);
+               return;
+    }
+
+
+
     if (isVideo)
     {
+
         QModelIndex currentIndex = temp->video_table->currentIndex();
         int index = currentIndex.row();
         if (index > 0)
@@ -373,6 +449,8 @@ void ControlBar::nexslot()
         {
             temp->playVideoFromIndex(0);
         }
+
+       onVideoMediaChange();
         return;
     }
     QModelIndex currentIndex = temp->music_table->currentIndex();
@@ -388,8 +466,8 @@ void ControlBar::nexslot()
     {
         temp->playMusicFromIndex(0);
 
-       temp->music_table->setCurrentIndex(currentIndex);
-       index=0;
+        temp->music_table->setCurrentIndex(currentIndex);
+        index=0;
     }
 }
 
@@ -438,23 +516,23 @@ void ControlBar::ChangeLoopBtIcon()
         }
     else{
         switch (loopstate)
-            {
-            case LoopState::Loop:
-                btloop->setIcon(QIcon(":/asset/image/loop_dark.png"));
-                break;
+        {
+        case LoopState::Loop:
+            btloop->setIcon(QIcon(":/asset/image/loop_dark.png"));
+            break;
 
-            case LoopState::Random:
-                btloop->setIcon(QIcon(":/asset/image/shuffle_dark.png"));
-                break;
+        case LoopState::Random:
+            btloop->setIcon(QIcon(":/asset/image/shuffle_dark.png"));
+            break;
 
-            case LoopState::Queue:
-                btloop->setIcon(QIcon(":/asset/image/queue_dark.png"));
-                break;
+        case LoopState::Queue:
+            btloop->setIcon(QIcon(":/asset/image/queue_dark.png"));
+            break;
 
-            default:
-                qDebug() << "trap in ChangeLoopBtIcon";
-                break;
-            }
+        default:
+            qDebug() << "trap in ChangeLoopBtIcon";
+            break;
+        }
     }
 
 }
@@ -476,20 +554,21 @@ void ControlBar::PlaySliderValueReset()
     playtime->setText(formatTime(currenttime));
     processSlider->setValue(currenttime);
 }
+
+void ControlBar::onVideoMediaChange(){
+     // 播放器加载完毕
+        PlaySliderValueReset();
+
+}
+
 void ControlBar::videoMediaChange(QtAV::MediaStatus state){
 
-    // 视频处理
-    if (state == QtAV::MediaStatus::LoadedMedia||state== QtAV::MediaStatus::BufferedMedia)  // QtAV 的 LoadedState
-    {
-        // 播放器加载完毕
-        auto player = VideoPlayer::instance();  // 使用 VideoPlayer 实例
-        PlaySliderValueReset();
-        endtime->setText(QString(formatTime(player->duration() / 1000 + 1)));
-        processSlider->setMaximum(player->duration() / 1000 + 1);
-    }
-    else if (state == QtAV::MediaStatus::EndOfMedia&&!VideoPlayer::instance()->manualStopped)  // QtAV 的 EndOfMedia
+   if (state == QtAV::MediaStatus::EndOfMedia&&!VideoPlayer::instance()->manualStopped)  // QtAV 的 EndOfMedia
     {
         // 播放结束
+
+        stopslot();
+        return;
         auto m_player = VideoPlayer::instance()->player();
         if(m_player->position() == m_player->duration()){ cTimer->stop();
             if (loopstate == Loop)
@@ -520,6 +599,8 @@ void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
     /// 换媒体文件
     if (state == QMediaPlayer::MediaStatus::LoadedMedia||state==QMediaPlayer::MediaStatus::BufferedMedia)
     {
+
+        qDebug()<<"BUfferedMedia MS";
         PlaySliderValueReset();
         endtime->setText(QString(formatTime(MusicPlayer::instance().duration() / 1000 + 1)));
         processSlider->setMaximum(MusicPlayer::instance().duration() / 1000 + 1);
@@ -527,7 +608,7 @@ void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
     else if (state == QMediaPlayer::MediaStatus::EndOfMedia)
     {
         cTimer->stop();
-        if (loopstate = Loop)
+        if (loopstate == Loop)
         {
             PlaySliderValueReset();
             playslot();
@@ -540,9 +621,25 @@ void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
         {
 
 
+            if (!temp->music_table){
+                qDebug()<<"mtable not existed";
+            }
+            if( !temp->music_table->currentIndex().isValid()){
+                qDebug()<<"index is not valid";
+            }
             QModelIndex currentIndex = temp->music_table->currentIndex();
+            auto count=temp->musicListModel->rowCount();
             int index = currentIndex.row();
-            int randomNumber = QRandomGenerator::global()->bounded(0, index);
+            int randomNumber = QRandomGenerator::global()->bounded(0, qMin(index+10,count-1));
+            if(count<2){
+
+            }
+            else
+            if(randomNumber==index){
+               if(index!=1) index--;
+               else index++;
+            }
+            qDebug()<<randomNumber;
             if (index < temp->music_table->count())
             {
                 temp->playMusicFromIndex(randomNumber);
@@ -624,31 +721,31 @@ void ControlBar::onSetSpeed(){
 
     }
     if(m_isLight){
-    if (speedstate == 0) {
-        speed = 0.5;
-        btspeed->setIcon(QIcon(":/asset/image/0.5xspeed.PNG"));
-        VideoPlayer::instance()->setSpeed(speed);
-        MusicPlayer::instance().setSpeed(speed);
+        if (speedstate == 0) {
+            speed = 0.5;
+            btspeed->setIcon(QIcon(":/asset/image/0.5xspeed.PNG"));
+            VideoPlayer::instance()->setSpeed(speed);
+            MusicPlayer::instance().setSpeed(speed);
 
-    } else if (speedstate == 1) {
-        speed = 1;
-        btspeed->setIcon(QIcon(":/asset/image/1xspeed.PNG"));
-        VideoPlayer::instance()->setSpeed(speed);
-        MusicPlayer::instance().setSpeed(speed);
+        } else if (speedstate == 1) {
+            speed = 1;
+            btspeed->setIcon(QIcon(":/asset/image/1xspeed.PNG"));
+            VideoPlayer::instance()->setSpeed(speed);
+            MusicPlayer::instance().setSpeed(speed);
 
-    } else if (speedstate == 2) {
-        speed = 1.5;
-        btspeed->setIcon(QIcon(":/asset/image/1.5xspeed.PNG"));
-        VideoPlayer::instance()->setSpeed(speed);
-        MusicPlayer::instance().setSpeed(speed);
+        } else if (speedstate == 2) {
+            speed = 1.5;
+            btspeed->setIcon(QIcon(":/asset/image/1.5xspeed.PNG"));
+            VideoPlayer::instance()->setSpeed(speed);
+            MusicPlayer::instance().setSpeed(speed);
 
-    } else if (speedstate == 3) {
-        speed = 2;
-        btspeed->setIcon(QIcon(":/asset/image/2xspeed.PNG"));
-        VideoPlayer::instance()->setSpeed(speed);
-        MusicPlayer::instance().setSpeed(speed);
+        } else if (speedstate == 3) {
+            speed = 2;
+            btspeed->setIcon(QIcon(":/asset/image/2xspeed.PNG"));
+            VideoPlayer::instance()->setSpeed(speed);
+            MusicPlayer::instance().setSpeed(speed);
+        }
     }
-}
     else{
         if (speedstate == 0) {
             speed = 0.5;
@@ -676,7 +773,7 @@ void ControlBar::onSetSpeed(){
         }
     }
 
-    }
+}
 
 
 
@@ -686,33 +783,68 @@ void ControlBar::onSetSpeed(){
 
 void ControlBar:: shiftThemeIcon(bool isLight){
     if(!isLight){
+        if(!inplay)
         btplay->setIcon(QIcon(":/asset/image/play_dark.PNG"));
+        else
+
+        btplay->setIcon(QIcon(":/asset/image/pause_dark.PNG"));
         btpre->setIcon(QIcon(":/asset/image/previous_dark.PNG"));
         btspeed->setIcon(QIcon(":/asset/image/1xspeed_dark.PNG"));
         btstop->setIcon(QIcon(":/asset/image/stop_dark.PNG"));
         btnex->setIcon(QIcon(":/asset/image/next_dark.PNG"));
         btscreen->setIcon(QIcon(":/asset/image/fscreen_dark.PNG"));
-        btloop->setIcon(QIcon(":/asset/image/queue_dark.PNG"));
 
 
-    volumeSlider->setLeftIcon(QIcon(":/asset/image/fvolume_dark..PNG"));
-
+        volumeSlider->setLeftIcon(QIcon(":/asset/image/fvolume_dark.PNG"));
+        volumeSlider->setIconSize(QSize(22, 22));
+        btplay->setIconSize(QSize(24, 24));
+        btpre->setIconSize(QSize(18, 18));
+        btspeed->setIconSize(QSize(36, 36));
+        btstop->setIconSize(QSize(18, 18));
+        btnex->setIconSize(QSize(18, 18));
+        btscreen->setIconSize(QSize(24, 24));
+        btloop->setIconSize(QSize(36, 36));
+        ChangeLoopBtIcon();
     }
     else{
+          if(!inplay)
         btplay->setIcon(QIcon(":/asset/image/play.PNG"));
+        else
+
+        btplay->setIcon(QIcon(":/asset/image/pause.PNG"));
+
         btpre->setIcon(QIcon(":/asset/image/previous.PNG"));
         btspeed->setIcon(QIcon(":/asset/image/1xspeed.PNG"));
         btstop->setIcon(QIcon(":/asset/image/stop.PNG"));
         btnex->setIcon(QIcon(":/asset/image/next.PNG"));
         btscreen->setIcon(QIcon(":/asset/image/fscreen.PNG"));
-        btloop->setIcon(QIcon(":/asset/image/queue.PNG"));
 
-    volumeSlider->setLeftIcon(QIcon(":/asset/image/fvolume.PNG"));
+        volumeSlider->setLeftIcon(QIcon(":/asset/image/fvolume.PNG"));
+        volumeSlider->setIconSize(QSize(22, 22));
+        btplay->setIconSize(QSize(24, 24));
+        btpre->setIconSize(QSize(18, 18));
+        btspeed->setIconSize(QSize(36, 36));
+        btstop->setIconSize(QSize(18, 18));
+        btnex->setIconSize(QSize(18, 18));
+        btscreen->setIconSize(QSize(24, 24));
+
+        ChangeLoopBtIcon();
 
     }
 
-        m_isLight=isLight	;
+    m_isLight=isLight	;
 
-        //changeloopicon依赖m_isLight;
+    //changeloopicon依赖m_isLight;
     ChangeLoopBtIcon();
+}
+void ControlBar::onStarted(){
+
+        qDebug()<<"started AV";
+
+        qint64 duration = VideoPlayer::instance()->duration();  // 使用 VideoPlayer 实例
+
+        if(duration==0) return ;
+          endtime->setText(QString(formatTime(duration / 1000 + 1)));
+        processSlider->setMaximum(duration / 1000 + 1);
+
 }

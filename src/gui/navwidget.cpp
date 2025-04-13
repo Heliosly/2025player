@@ -37,18 +37,22 @@ NavWidget::NavWidget()
 
     auto AddItems = [this](QIcon icon, QString name){
         DStandardItem *item = new DStandardItem(icon, name);
+        item->setTextAlignment(Qt::AlignCenter);
+//        QFont font;
+//        font.setBold(true);  // 设置为粗体
+//        item->setFont(font);
         item->setEditable(false);
         model->appendRow(item);
         item->setSizeHint(QSize(0,60));
         return item;
 
     };
-    AddItems( QIcon(":/asset/image/music2.PNG"),"Recommend");
+    AddItems( QIcon(":/asset/image/music3.PNG"),"Recommend");
 
     model->appendRow(separatorItem);
-    AddItems( QIcon(":/asset/image/music2.PNG"),"Music");
-    AddItems(QIcon(":asset/image/video2.PNG"),"Video");
-    AddItems(QIcon(":asset/image/video2.PNG"),"History");
+    AddItems( QIcon(":/asset/image/music3.PNG"),"Music");
+    AddItems(QIcon(":asset/image/video3.PNG"),"Video");
+    AddItems(QIcon(":asset/image/video3.PNG"),"History");
    // ListView1->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     ListView1->setModel(model);
     VLayoutLeft->addSpacing(5);
@@ -87,7 +91,8 @@ void LabelItemDelegate:: paint(QPainter *painter, const QStyleOptionViewItem &op
             painter->setFont(font);  // 应用字体到 painte
 
              painter->drawText(option.rect, Qt::AlignLeft | Qt::AlignVCenter, "媒体列表");
-                } else {
+                }
+//        else {
 //            painter->save();
 //           QPainterPath path;
 //               // 绘制选中背景（带圆角效果）
@@ -115,37 +120,39 @@ void LabelItemDelegate:: paint(QPainter *painter, const QStyleOptionViewItem &op
 
 
 //                             painter->restore();
+
+
+        else
             QStyledItemDelegate::paint(painter, option, index);
-        }
     }
 
 void NavWidget::shiftTheme(bool isLight){
-    if(isLight)
-    for (int row = 0; row < model->rowCount(); ++row) {
-        QStandardItem *item = model->item(row, 0);  // 获取每一行的第一个项目
-        if (item) {
-            QString iconPath = item->icon().name();  // 获取当前图标的路径
-            if (!iconPath.isEmpty()) {
-                // 修改图标路径，末尾加 "_dark"
-                QString newIconPath = iconPath.replace(".PNG", "_dark.PNG");  // 如果是PNG文件，替换为 _dark.PNG
-                item->setIcon(QIcon(newIconPath));  // 设置新的图标
-            }
-        }
-    }
-    else{
+//    if(isLight)
+//    for (int row = 0; row < model->rowCount(); ++row) {
+//        QStandardItem *item = model->item(row, 0);  // 获取每一行的第一个项目
+//        if (item) {
+//            QString iconPath = item->icon().name();  // 获取当前图标的路径
+//            if (!iconPath.isEmpty()) {
+//                // 修改图标路径，末尾加 "_dark"
+//                QString newIconPath = iconPath.replace(".PNG", "_dark.PNG");  // 如果是PNG文件，替换为 _dark.PNG
+//                item->setIcon(QIcon(newIconPath));  // 设置新的图标
+//            }
+//        }
+//    }
+//    else{
 
-         for (int row = 0; row < model->rowCount(); ++row) {
-        QStandardItem *item = model->item(row, 0);  // 获取每一行的第一个项目
-        if (item) {
-            QString iconPath = item->icon().name();  // 获取当前图标的路径
-            if (!iconPath.isEmpty()) {
-                // 修改图标路径，末尾加 "_dark"
-                QString newIconPath = iconPath.replace("_dark.PNG", ".PNG");  // 如果是PNG文件，替换为 _dark.PNG
-                item->setIcon(QIcon(newIconPath));  // 设置新的图标
-            }
-        }
-    }
+//         for (int row = 0; row < model->rowCount(); ++row) {
+//        QStandardItem *item = model->item(row, 0);  // 获取每一行的第一个项目
+//        if (item) {
+//            QString iconPath = item->icon().name();  // 获取当前图标的路径
+//            if (!iconPath.isEmpty()) {
+//                // 修改图标路径，末尾加 "_dark"
+//                QString newIconPath = iconPath.replace("_dark.PNG", ".PNG");  // 如果是PNG文件，替换为 _dark.PNG
+//                item->setIcon(QIcon(newIconPath));  // 设置新的图标
+//            }
+//        }
+//    }
 
-    }
+//    }
 
 }

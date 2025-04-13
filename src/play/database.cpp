@@ -76,7 +76,7 @@ int DataBase::getListCount(const QString &playListName) {
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement = QString("SELECT COUNT(*) FROM %1;").arg(playListName);
-
+    localDb.commit();
     if (!sql_query.exec(sqlStatement)) {
         qDebug() << "获取" << playListName << "总数失败：" << sql_query.lastError();
         return -1;
@@ -118,8 +118,8 @@ bool DataBase::createPlayListNotExist()
     }
     if (sql_query.next()) {
         if (sql_query.value(0).toInt() == 0) {
-            sqlStatement = QString("CREATE TABLE %1 (id INTEGER PRIMARY KEY, dirpath_id INTEGER NOT NULL, filepath TEXT NOT NULL, title TEXT, "
-                                    "artist TEXT, album TEXT, duration TEXT, poster BLOB, FOREIGN KEY(dirpath_id) REFERENCES filepath_table(id));").arg(playListName);
+            sqlStatement = QString("CREATE TABLE %1 (id INTEGER PRIMARY KEY, dirpath_id INTEGER NOT NULL, filePath TEXT NOT NULL, title TEXT, "
+                                    "artist TEXT, album TEXT, duration TEXT, poster BLOB, FOREIGN KEY(dirpath_id) REFERENCES filePath_table(id));").arg(playListName);
             if (!sql_query.exec(sqlStatement)) {
                 qDebug() << "歌单创建失败：" << playListName << sql_query.lastError();
                 return false;
@@ -161,7 +161,7 @@ bool DataBase::saveMetaData(const QMap<QString, QString> &metaDataMap, const QPi
 {
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
-    QString dirpath, filepath, title, artist, album, duration;
+    QString dirpath, filePath, title, artist, album, duration;
     QByteArray poster;
     QBuffer buffer(&poster);
     buffer.open(QIODevice::WriteOnly);
@@ -169,13 +169,13 @@ bool DataBase::saveMetaData(const QMap<QString, QString> &metaDataMap, const QPi
 
     for (auto it = metaDataMap.constBegin(); it != metaDataMap.constEnd(); ++it) {
         if      (it.key() == "dirpath")  { dirpath = it.value(); }
-        else if (it.key() == "filepath") { filepath = it.value(); }
+        else if (it.key() == "filepath") { filePath = it.value(); }
         else if (it.key() == "title")    { title = it.value(); }
         else if (it.key() == "artist")   { artist = it.value(); }
         else if (it.key() == "album")    { album = it.value(); }
         else if (it.key() == "duration") { duration = it.value(); }
     }
-    if (dirpath.isNull() || filepath.isNull()) {
+    if (dirpath.isNull() || filePath.isNull()) {
         return false;
     }
 
@@ -191,19 +191,19 @@ bool DataBase::saveMetaData(const QMap<QString, QString> &metaDataMap, const QPi
     }
     int dirpathId = sql_query.value(0).toInt();
 
-    QString sqlStatementDelete = "DELETE FROM locallist WHERE filepath = :filepath";
+    QString sqlStatementDelete = "DELETE FROM locallist WHERE filePath = :filepath";
     sql_query.prepare(sqlStatementDelete);
-    sql_query.bindValue(":filepath", filepath);
+    sql_query.bindValue(":filePath", filePath);
     if (!sql_query.exec()) {
-        qDebug() << "无法清除相同源的歌曲元数据：" << filepath << sql_query.lastError();
+        qDebug() << "无法清除相同源的歌曲元数据：" << filePath << sql_query.lastError();
         return false;
     }
 
-    QString sqlStatementInsert = "INSERT INTO locallist (dirpath_id, filepath, title, artist, album, duration, poster) "
-                                 "VALUES (:dirpath_id, :filepath, :title, :artist, :album, :duration, :poster);";
+    QString sqlStatementInsert = "INSERT INTO locallist (dirpath_id, filePath, title, artist, album, duration, poster) "
+                                 "VALUES (:dirpath_id, :filePath, :title, :artist, :album, :duration, :poster);";
     sql_query.prepare(sqlStatementInsert);
     sql_query.bindValue(":dirpath_id", dirpathId);
-    sql_query.bindValue(":filepath", filepath);
+    sql_query.bindValue(":filePath", filePath);
     sql_query.bindValue(":title", title.isEmpty() ? "未知歌名" : title);
     sql_query.bindValue(":artist", artist.isEmpty() ? "未知艺术家" : artist);
     sql_query.bindValue(":album", album.isEmpty() ? "未知专辑" : album);
@@ -251,9 +251,14 @@ QJsonArray DataBase::getTagsArrayByUrl(const QString &filePath)
 
 QJsonArray DataBase::toApi(const QString &filePath)
 {
+
     if (checkUrlExistsInTags(filePath)) {
+
+    qDebug()<<"read success "<<filePath;
+
         return getTagsArrayByUrl(filePath);
     }
+    qDebug()<<"send request for "<<filePath;
     QNetworkAccessManager manager;
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -289,13 +294,17 @@ QJsonArray DataBase::toApi(const QString &filePath)
         if (responseObject.contains("tags") && responseObject["tags"].isArray()) {
             QJsonArray tagsArray = responseObject["tags"].toArray();
             saveTagsFromJson(filePath, tagsArray);
+
+         qDebug()<<filePath<<"succeeful to Api";
             return tagsArray;
         }
     } else {
-        qWarning() << "Request failed:" << reply->errorString();
+        qWarning() << "Ai api Request failed:" << reply->errorString();
     }
     reply->deleteLater();
     multiPart->deleteLater();
+
+         qDebug()<<filePath<<"succeeful2 to Api";
     return QJsonArray();
 }
 
@@ -367,11 +376,7 @@ bool DataBase::rewriteTagsWithList(const QString &url, const QList<QPair<QString
         qDebug() << "标签重写失败:" << query.lastError().text();
         return false;
     }
-    if (!localDb.commit()) {
-        qDebug() << "事务提交失败";
-        return false;
-    }
-    return true;
+      return true;
 }
 
 QSqlDatabase DataBase::getThreadDatabase()
@@ -393,30 +398,52 @@ QSqlDatabase DataBase::getThreadDatabase()
 }
 
 
+bool DataBase::saveHistoryData(
+                               const QList<HistoryMData> &history)
+{
+    QSqlDatabase db = getThreadDatabase();
+    QSqlQuery query(db);
 
-bool DataBase::saveHistoryData(const QList<HistoryMData> &history) {
-    QSqlDatabase localDb = getThreadDatabase();
-    QSqlQuery sql_query(localDb);
 
-
-    // Clear existing history table
-    if (!sql_query.exec("DELETE FROM historylist")) {
-        qDebug() << "清空历史记录失败：" << sql_query.lastError();
+    // 1) 确保表存在
+    if (!createHistoryListNotExist()) {
+        qDebug() << "确保 historylist 表存在失败";
         return false;
     }
 
-    // Insert new history records
+    // 2) 清空指定目录的历史记录
+    if (!query.exec("DELETE FROM historylist")) {
+          qDebug() << "清空历史记录失败：" << query.lastError();
+          return false;
+      }
+    // 4) 插入新的历史记录
     for (const HistoryMData &item : history) {
-        QString sqlStatement = "INSERT INTO historylist (filePath, title, duration) "
-                             "VALUES (:url, :title, :duration)";
+        QFileInfo fileInfo(item.url);
+        QString dirPath = fileInfo.absolutePath();
+    QSqlQuery q2(db);
 
-        sql_query.prepare(sqlStatement);
-        sql_query.bindValue(":url", item.url);
-        sql_query.bindValue(":title", item.title);
-        sql_query.bindValue(":duration", QString::number(item.duration));
+    q2.prepare("SELECT id FROM filepath_table WHERE dirpath = :dirPath");
+    q2.bindValue(":dirPath", dirPath);
+    if (!q2.exec() || !q2.next()) {
+        qDebug() << "获取 dirpath_id 失败：" << q2.lastError();
+        return false;
+    }
+    int dirpath_id = q2.value(0).toInt();
 
-        if (!sql_query.exec()) {
-            qDebug() << "插入历史记录失败：" << sql_query.lastError();
+        query.prepare(R"(
+            INSERT INTO historylist
+                (dirpath_id, filePath, title, duration)
+            VALUES
+                (:dirpath_id, :filePath, :title, :duration)
+        )");
+        query.bindValue(":dirpath_id", dirpath_id);
+        query.bindValue(":filePath",    item.url);
+        query.bindValue(":title",       item.title);
+        // 如果 duration 本身是 int，也可以直接 bindValue(item.duration)
+        query.bindValue(":duration",    QString::number(item.duration));
+
+        if (!query.exec()) {
+            qDebug() << "插入历史记录失败：" << query.lastError();
             return false;
         }
     }
@@ -455,6 +482,7 @@ void DataBase::clearTable(const QString &playListName) {
      }
      return urlList;
  }
+
 
 bool DataBase::deleteByUrl(const QStringList &url, const QString &playListName) {
     QSqlDatabase localDb = getThreadDatabase();
@@ -552,7 +580,7 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
     QSqlQuery sql_query(localDb);
 
     QString sqlStatement = QString(
-        "SELECT filepath, title, artist, album, duration, poster "  // 增加 poster 字段
+        "SELECT filePath, title, artist, album, duration, poster "  // 增加 poster 字段
         "FROM locallist "
         "LIMIT :offset OFFSET :hint;"
     );
@@ -569,7 +597,7 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
 
     // 解析查询结果
     while (sql_query.next()) {
-        QString filepath = sql_query.value("filepath").toString();
+        QString filePath = sql_query.value("filePath").toString();
         QString title = sql_query.value("title").toString();
         QString artist = sql_query.value("artist").toString();
         QString album = sql_query.value("album").toString();
@@ -585,7 +613,7 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
         }
 
         // 创建 MetaData 对象并添加到结果列表
-        MetaData metaData(filepath, title, artist, album, duration, poster);
+        MetaData metaData(filePath, title, artist, album, duration, poster);
         resultList.append(metaData);
     }
 
@@ -604,4 +632,36 @@ bool DataBase::createTagsTableNotExist() {
     return true;
 }
 
+MetaData DataBase::getMetaDataByUrl(const QString &url)
+{
+    MetaData metaData;
+    QSqlDatabase localDb = getThreadDatabase();  // 获取数据库连接
+    QSqlQuery sql_query(localDb);
+
+    // SQL 查询语句，根据 URL 查找对应的元数据
+    sql_query.prepare("SELECT title, artist, album, duration, poster FROM locallist WHERE filePath = :filePath;");
+    sql_query.bindValue(":filePath", url);
+
+    if (!sql_query.exec()) {
+        qDebug() << "查询歌曲元数据失败：" << sql_query.lastError();
+        return metaData;  // 返回一个默认构造的 MetaData 对象
+    }
+
+    if (sql_query.next()) {
+        // 从查询结果中提取数据
+        metaData.url = url;
+        metaData.title = sql_query.value("title").toString();
+        metaData.artist = sql_query.value("artist").toString();
+        metaData.album = sql_query.value("album").toString();
+        metaData.duration = sql_query.value("duration").toInt();
+
+        // 获取封面图片数据并转换为 QPixmap
+        QByteArray poster = sql_query.value("poster").toByteArray();
+        QPixmap pixmap;
+        pixmap.loadFromData(poster);
+        metaData.covpix = pixmap;  // 设置封面图
+    }
+
+    return metaData;
+}
 

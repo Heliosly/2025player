@@ -1,18 +1,5 @@
 #include "mainwindow.h"
-#include"uservector.h"
-#include"shortcutmanager.h"
-#include"videoplayer.h"
-#include<QVBoxLayout>
-#include<QScreen>
-#include<QHBoxLayout>
-#include<DPushButton>
-#include<DLabel>
-#include<DScrollBar>
-#include<DTitlebar>
-#include<DWidgetUtil>
-#include<DPaletteHelper>
-#include<DScrollArea>
-#include<QStackedWidget>
+#include<DApplicationHelper>
 MainWindow::~MainWindow() {
 
     delete &MusicPlayer::instance();
@@ -22,41 +9,40 @@ MainWindow::~MainWindow() {
 MainWindow::MainWindow()
 
 {
-    //this->setWindowFlags(Qt::FramelessWindowHint);
-
     this->titlebar()->setIcon(QIcon(":asset/image/logo.png"));
     this->setTitlebarShadowEnabled(false);
     this->setWindowRadius(8);
     this->setObjectName("main_window");
     this->resize(QSize(1450, 900));
     this->setEnableSystemResize(true);
+
     //标题栏
-    DTitlebar * bar=this->titlebar()
-                    ;
+
+    VideoPlayer::instance()->m_controlBar->connectVideoFc();
+
+    DTitlebar * bar=this->titlebar();
+    ;
     DMenu *menu =  bar->menu();
     QAction *action = new QAction("设置", this);
     menu->addAction(action);
 
     music_table = new MusicTable();
 
-     recommandPage = new DFrame (this);
-    PieChartWidget * userChart= new PieChartWidget(UserPreference::instance()->m_vector,recommandPage);
 
-     UserPreference::instance()->temp=userChart;
-     QHBoxLayout * recommandLayout = new QHBoxLayout();
-    recommandPage->setLayout(recommandLayout);
-   recommandLayout->addWidget(userChart);
+    recommandPage = new RecommandPage (this);
+    recommandPage->refreshList();
+    VideoPlayer::instance()->m_controlBar->temp=music_table;
 
 
     bar->setSeparatorVisible(false);
     bar->setSwitchThemeMenuVisible(true);
     bar->setFixedHeight(90);
     Navw->setAutoFillBackground(true);
+    Navw->setMaximumWidth(250);
 
     cbar->setAutoFillBackground(true);
 
     cbar->temp=music_table;
-    cbar->changePlayer(0);
     moveToCenter(this); //把窗口移动到屏幕中间
     //把主窗口分为上下两个垂直布局
 
@@ -68,11 +54,41 @@ MainWindow::MainWindow()
 
     page = new QStackedWidget(this);
     mainPage=new QStackedWidget(this);
+    recommandPage ->setObjectName("recommandFrame");
 
+    DFrame *history = new DFrame(this);
+    history->setObjectName("historyFrame");
+    QVBoxLayout *historyLayout = new QVBoxLayout(history);
+    history->setLayout(historyLayout);
 
-    page->addWidget(music_table);
-    page->addWidget(settingPage);
-    page->addWidget(recommandPage);
+    // 2. 把 historyTable 从旧 parent “解绑”，再加入到 historyLayout
+    //    （这样可以避免原来在 music_table 中的约束）
+    music_table->historyTable->setParent(nullptr);
+    historyLayout->addWidget(music_table->historyTable);
+
+    // 3. 确保它是可见的
+    ///
+    music_table->historyTable->setVisible(true);
+    DFrame* historyEmptyFrame = new DFrame(this);
+    historyEmptyFrame->setObjectName("History_Empty_Frame");
+
+    QVBoxLayout* layout = new QVBoxLayout(historyEmptyFrame);
+    layout->setAlignment(Qt::AlignCenter);
+
+    DLabel* label = new DLabel("尚未播放过媒体文件", historyEmptyFrame);
+     QFont font;
+      font.setFamily("Noto Sans CJK SC");  // 设置字体家族
+            font.setPointSize(24);  // 设置字体大小
+           label->setFont(font);
+    label->setAlignment(Qt::AlignCenter);
+    ///
+
+    layout->addWidget(label);
+    page->addWidget(music_table);//0
+    page->addWidget(settingPage);//1
+    page->addWidget(recommandPage);//2
+    page->addWidget(history);//3
+    page->addWidget(historyEmptyFrame);//4
     RightHLayout->addWidget(page);
 
     cw->setLayout(MainVLayout);
@@ -84,7 +100,6 @@ MainWindow::MainWindow()
     //    cw->setPalette(palette);
     mainPage->addWidget(cw2);
 
-    mainPage->addWidget(VideoPlayer::instance());
     cw2->setLayout(UpHLayout);
 
     MainVLayout->addLayout(DownHLayout);
@@ -116,6 +131,7 @@ MainWindow::MainWindow()
     //    MainVLayout->setContentsMargins(0,0,0,0);
 
     //    DownHLayout->setContentsMargins(0,0,0,0);
+    auto cbar2=VideoPlayer::instance()->m_controlBar;
     connect(qApp, &QCoreApplication::aboutToQuit, this,&MainWindow::onAppAboutToQuit);
     // 在构造函数末尾添加快捷键连接
     connect(ShortcutManager::instance(), &ShortcutManager::playTriggered,
@@ -130,36 +146,62 @@ MainWindow::MainWindow()
             cbar, &ControlBar::handleVolumeUp);
     connect(ShortcutManager::instance(), &ShortcutManager::volumeDownTriggered,
             cbar, &ControlBar::handleVolumeDown);
-    connect(cbar,&ControlBar::toReturnMediaTable,this,&MainWindow::closeVideoPage);
+    connect(ShortcutManager::instance(), &ShortcutManager::playTriggered,
+               cbar2, &ControlBar::handlePlay);
+       connect(ShortcutManager::instance(), &ShortcutManager::switchLoopTriggered,
+               cbar2, &ControlBar::handleChangeLoop);
+       connect(ShortcutManager::instance(), &ShortcutManager::nextTriggered,
+               cbar2, &ControlBar::handleNext);
+       connect(ShortcutManager::instance(), &ShortcutManager::previousTriggered,
+               cbar2, &ControlBar::handlePrevious);
+       connect(ShortcutManager::instance(), &ShortcutManager::volumeUpTriggered,
+               cbar2, &ControlBar::handleVolumeUp);
+       connect(ShortcutManager::instance(), &ShortcutManager::volumeDownTriggered,
+               cbar2, &ControlBar::handleVolumeDown);
+       connect(music_table,&MusicTable::mediaChange,cbar2,&ControlBar::onVideoMediaChange);
+    connect(VideoPlayer::instance(),&VideoPlayer::toCloseVideo,this,&MainWindow::closeVideoPage);
 
-    connect(cbar->btscreen, &DIconButton::clicked, this, &MainWindow::onShiftScreen);
-    connect(music_table,&MusicTable::videoPlaying,this,&MainWindow::showVideoPage);
-    connect(VideoPlayer::instance(),&VideoPlayer::toShiftScreen,this,&MainWindow::onShiftScreen);
+    connect(VideoPlayer::instance(),&VideoPlayer::toShowVideo,this,&MainWindow::showVideoPage);
+
+    connect(music_table, &MusicTable::toResizeWidget,
+            music_table, [this](){  // 注意括号和可调用对象声明
+                music_table->onResetWindowSize(this->width());
+            });
+    connect(music_table,&MusicTable::mediaDeletedByDir,recommandPage,&RecommandPage::deleteByDir);
+
+    connect(music_table,&MusicTable::toRefreshRecommand,recommandPage,&RecommandPage::refreshList,Qt::QueuedConnection);
 }
 void MainWindow::closeVideoPage(){
 
-    if(isFull){
-        showNormal();
-        isFull =!isFull;
-    }
-    mainPage->setCurrentIndex(0);
     isVideoPage=0;
 
+    auto widget = VideoPlayer::instance()->widget();
+    widget->hide();
+    this->show();
+    VideoPlayer::instance()->stop();
+
 }
+
+void MainWindow::showVideoPage(){
+    isVideoPage=1;
+    auto widget = VideoPlayer::instance()->widget();
+    // 复制 MainWindow 的几何信息（含位置+大小）
+    widget->setGeometry(this->geometry());
+    widget->show();
+    this->hide();
+    VideoPlayer::instance()->m_controlBar->LoadStyleSheet(":/asset/qss/cbar_dark.qss");
+    VideoPlayer::instance()->m_controlBar->shiftThemeIcon(0);
+}
+
 ///切换到设置页面
 void MainWindow::showSettingPage(){
     page->setCurrentIndex(1);
 
 }
-///显示播放器播放视频
-void MainWindow::showVideoPage(){
-    mainPage->setCurrentIndex(1);
-    isVideoPage=1;
-}
-///深色浅色两套主题的颜色/图标设置
+///显示播放器播放视频///深色浅色两套主题的颜色/图标设置
 void MainWindow::setTheme(DGuiApplicationHelper::ColorType theme)
 {
-this->setStyleSheet("");  // 先清空
+    this->setStyleSheet("");  // 先清空
     music_table->setStyleSheet("");
     if(theme==DGuiApplicationHelper::LightType){
 
@@ -167,7 +209,7 @@ this->setStyleSheet("");  // 先清空
         Navw->LoadStyleSheet(":/asset/qss/navwidget_light.qss");
         cbar->LoadStyleSheet(":/asset/qss/cbar_light.qss");
 
-        this->LoadStyleSheet("/home/SonnyBoy/Desktop/1.qss");
+        this->LoadStyleSheet(":/asset/qss/mainwindow_light.qss");
         music_table->setThemeType(1);
         cbar->shiftThemeIcon(1);
 
@@ -181,9 +223,8 @@ this->setStyleSheet("");  // 先清空
         cbar->LoadStyleSheet(":/asset/qss/cbar_dark.qss");
 
 
-//        this->LoadStyleSheet(":/asset/qss/mainwindow_dark.qss");
 
-        this->LoadStyleSheet("/home/SonnyBoy/Desktop/2.qss");
+        this->LoadStyleSheet(":/asset/qss/mainwindow_dark.qss");
 
         music_table->setThemeType(0);
 
@@ -197,42 +238,64 @@ void MainWindow::currentchange(const QModelIndex &current,const QModelIndex &pre
 {
     int row=current.row();
 
+    if(m_lastPosition == 4){
+
+        cbar->btnex->setDisabled(false);
+
+        cbar->btpre->setDisabled(false);
+
+            cbar->btloop->setDisabled(false);
+
+            cbar->inHistory= false;
+
+    }
+
 
     if(page->currentIndex()!=1){
         page->setCurrentIndex(0);
         m_lastPosition=-1;
     }
     if(row==0)
-         {
+    {
 
         page->setCurrentIndex(2);
 
-       m_lastPosition=0;
+        m_lastPosition=0;
     }
     else
-    if (row==2)
-    {
-        music_table->page->setCurrentIndex(0);
-        //        if(cbar->mediaPlayer!=nullptr){
-        //            cbar->mediaPlayer->stop();
-        //        }
-        cbar->readVolume("");
-        cbar->changePlayer(0);
+        if (row==2)
+        {
+            page->setCurrentIndex(0);
+            music_table->page->setCurrentIndex(0);
+            //        if(cbar->mediaPlayer!=nullptr){
+            //            cbar->mediaPlayer->stop();
+            //        }
+            cbar->readVolume("");
 
-       m_lastPosition=2;
-    }
-    else if(row==3){
+            m_lastPosition=2;
+        }
+        else if(row==3){
 
-        cbar->changePlayer(1);
-        music_table->page->setCurrentIndex(1);
-        //video
+            page->setCurrentIndex(0);
+            music_table->page->setCurrentIndex(1);
+            //video
 
-       m_lastPosition=3;
-    }
-    else if (row==4){
-        music_table->page->setCurrentIndex(2);
-       m_lastPosition=4;
-    }
+            m_lastPosition=3;
+        }
+        else if (row==4){
+            m_lastPosition=4;
+            cbar->btnex->setDisabled(true);
+
+            cbar->btpre->setDisabled(true);
+            cbar->btloop->setDisabled(true);
+
+            cbar->inHistory=true;
+            if(music_table->haveHistory)
+            page->setCurrentIndex(3);
+            else{
+                page->setCurrentIndex(4);
+            }
+        }
 
 }
 
@@ -261,7 +324,7 @@ void MainWindow::LoadStyleSheet( QString url)
 }
 
 void MainWindow::onAppAboutToQuit() {
-UserPreference::instance()->reWrite();
+    UserPreference::instance()->reWrite();
 
 
 }
@@ -271,6 +334,7 @@ void MainWindow::onShiftScreen()
 {
 
     if(!isFull) {
+
 
         showFullScreen();
 
@@ -286,17 +350,5 @@ void MainWindow::onShiftScreen()
     isFull = !isFull;
 
 }
-void MainWindow::keyPressEvent(QKeyEvent *event)
-{
-    // 当全屏且按下 ESC 键时退出全屏
-    if (event->key() == Qt::Key_Escape && isFull) {
-        showNormal();
-        isFull = false;
-        event->accept();
-        return;
-    }
-    QMainWindow::keyPressEvent(event);
-}
-
 
 

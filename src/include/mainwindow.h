@@ -3,12 +3,29 @@
 #include"settingpage.h"
 #include "navwidget.h"
 #include"musictable.h"
-#include<controlbar.h>
+#include"recommandpage.h"
+#include"controlbar.h"
+#include"uservector.h"
+#include"shortcutmanager.h"
+#include"videoplayer.h"
+#include<QVBoxLayout>
+#include<QScreen>
+#include<QHBoxLayout>
+#include<DPushButton>
+#include<DLabel>
+#include<DScrollBar>
+#include<DTitlebar>
+#include<DWidgetUtil>
+#include<DPaletteHelper>
+#include<DScrollArea>
+#include<QStackedWidget>
 #include <DMainWindow>
-#include <DGuiApplicationHelper>//用来适配深色模式
+#include <DGuiApplicationHelper>
 #include<QVBoxLayout>
 #include<QMediaPlayer>
 #include <QResizeEvent>
+
+
 DWIDGET_USE_NAMESPACE
 
 class MainWindow : public DMainWindow
@@ -22,11 +39,12 @@ public:
 private:
     bool isFull=0;
     bool isVideoPage=0;
-    QWidget *cw = new QWidget(this);
+    DWidget *cw = new DWidget(this);
     NavWidget *Navw = new  NavWidget;
-    ControlBar * cbar = new ControlBar(this);
+    ControlBar * cbar = new ControlBar(this,false);
     //主布局
     QVBoxLayout* MainVLayout = new QVBoxLayout;
+    LoopState preState;
 
     QHBoxLayout* UpHLayout = new QHBoxLayout;
     QHBoxLayout* DownHLayout = new QHBoxLayout;
@@ -35,7 +53,7 @@ private:
     QHBoxLayout* LeftHLayout = new QHBoxLayout;
     QMediaPlayer *player = new QMediaPlayer(this);
     QStackedWidget * page;
-     DFrame * recommandPage ;
+     RecommandPage * recommandPage ;
     MusicTable *music_table;
     SettingPage *settingPage ;
     QWidget*cw2=new QWidget(this);
@@ -58,10 +76,7 @@ public slots:
 public emit:
     void showSettingPage();
 private:
-     QWidget*videoOriginalParent;
-    QLayout*videoOriginalLayout;
-protected:
-    void keyPressEvent(QKeyEvent *event) override;
+  protected:
 
 };
 

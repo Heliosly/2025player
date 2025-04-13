@@ -75,7 +75,25 @@ void SettingPage::loadShortcuts() {
         }
          }
     if(!s){
-       resetDefaults();
+        // 获取ShortcutManager实例并设置默认快捷键
+    ShortcutManager* manager = ShortcutManager::instance();
+    manager->setupDefaultShortcuts(); // 重置内存中的快捷键
+
+    // 构建默认快捷键映射（直接从ShortcutManager获取）
+    QMap<QString, QKeySequence> defaultShortcuts;
+    const QStringList actionNames = {"切换循环模式", "播放|暂停", "下一曲", "上一曲", "音量加", "音量减"};
+    for (const QString &action : actionNames) {
+        if (manager->hotkeys.contains(action)) {
+            defaultShortcuts[action] = manager->hotkeys[action]->shortcut();
+        }
+    }
+
+    // 更新UI中的QKeySequenceEdit控件
+    for (const QString &action : shortcutEditors.keys()) {
+        if (defaultShortcuts.contains(action)) {
+            shortcutEditors[action]->setKeySequence(defaultShortcuts[action]);
+        }
+    }
     }
 }
 
@@ -101,7 +119,7 @@ void SettingPage::resetDefaults() {
 
     // 构建默认快捷键映射（直接从ShortcutManager获取）
     QMap<QString, QKeySequence> defaultShortcuts;
-    const QStringList actionNames = {"切换循环模式", "播放/暂停", "下一曲", "上一曲", "音量加", "音量减"};
+    const QStringList actionNames = {"切换循环模式", "播放|暂停", "下一曲", "上一曲", "音量加", "音量减"};
     for (const QString &action : actionNames) {
         if (manager->hotkeys.contains(action)) {
             defaultShortcuts[action] = manager->hotkeys[action]->shortcut();

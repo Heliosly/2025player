@@ -1,4 +1,4 @@
-#include"musicplayer.h"
+﻿#include"musicplayer.h"
 #include"metadata.h"
 #include <fileref.h>
 #include <tag.h>
@@ -26,6 +26,9 @@ MusicPlayer::MusicPlayer()
     initConnect();
 
 }
+MusicPlayer::~MusicPlayer(){
+//TODO
+}
 void MusicPlayer::play(const QString& url){
     if(QFile::exists(url)){
         player->stop();
@@ -48,6 +51,7 @@ void MusicPlayer::initMusicByDir(const QString &dir) {
 
 
     QDir localdir(dir);
+    QStringList notExtUrl;
     if (localdir.exists()) {
         QStringList filters;
         filters << "*.mp3" << "*.wav" << "*.flac";
@@ -57,6 +61,10 @@ void MusicPlayer::initMusicByDir(const QString &dir) {
         for (const QFileInfo& fileInfo : files) {
 
             // qDebug()<<fileInfo;
+            if(!fileInfo.exists()){
+                notExtUrl.append(fileInfo.absoluteFilePath());
+                              continue;
+            }
             QString filePath = fileInfo.absoluteFilePath();
             if(isUrlInDatabase(DataBase::instance(),filePath,locallist)){
                 continue;
@@ -67,13 +75,19 @@ void MusicPlayer::initMusicByDir(const QString &dir) {
             if (!f.isNull() && f.tag()) {
 
 
-                loadLocalMusic(filePath,dir);
+                 loadLocalMusic(filePath,dir);
+
+
 
             }
         }
 
 
+//TODO
     }
+    else{
+         }
+
 }
 ///向数据库中加入某一路径
 void MusicPlayer::addPathToDB(const QString &dir){
@@ -380,7 +394,10 @@ void MusicPlayer::loadLocalMusic(const QString &url,const QString &dir) {
             }
    else{
        qDebug()<<"save metadate ok";
-   }
+
+
+      }
+
 }
 
 void MusicPlayer::uninstallPath(const QString &filePath) {
@@ -407,7 +424,7 @@ void MusicPlayer::uninstallPath(const QString &filePath) {
         }
         else {
             qDebug() << "delete MMetalist";
-DataBase::instance()->reSetListCount();
+        DataBase::instance()->reSetListCount();
                 emit mediaListSub(filePath);
         }
     });
@@ -449,7 +466,7 @@ void MusicPlayer::setSpeed(qreal speed){
 
 }
 void MusicPlayer::onMediaChange(QMediaPlayer::MediaStatus state){
-    if (state==QMediaPlayer::MediaStatus::LoadedMedia)
+    if (state==QMediaPlayer::MediaStatus::BufferedMedia)
     {
         QMediaContent media = player->media();
         history.addToHistory(
@@ -463,21 +480,21 @@ void MusicPlayer::onMediaChange(QMediaPlayer::MediaStatus state){
 }
 
 void MusicPlayer::readHistoryList() {
-    QSqlQuery sql_query(DataBase::instance()->db);
-        QString sqlStatement = QString("select url,title,duration from %1;").arg(historylist);
+    QSqlQuery query(DataBase::instance()->db);
+        QString sqlStatement = QString("SELECT filePath, title, duration FROM historylist;");
 
-    if (!sql_query.exec(sqlStatement)) {
-        qDebug() << "Unable to read history list: " << sql_query.lastError();
-        return;
-    }
+        if (!query.exec(sqlStatement)) {
+            qDebug() << "Unable to read history list: " << query.lastError();
+            return;
+        }
 
-    while(sql_query.next()) {
-        QString url = sql_query.value(0).toString();
-        QString title = sql_query.value(1).toString();
-        int duration = sql_query.value(2).toInt();
+        while (query.next()) {
+            QString url      = query.value(0).toString();
+            QString title    = query.value(1).toString();
+            int     duration = query.value(2).toInt();
 
-        history.history.append(HistoryMData(url, title, duration ));
-    }
+            history.history.append(HistoryMData(url, title, duration));
+        }
 }
 void MusicPlayer::onAppAboutToQuit(){
 
@@ -492,5 +509,9 @@ void MusicPlayer::initConnect(){
     connect(player,&QMediaPlayer::mediaStatusChanged,this,&MusicPlayer::mediaStatusChanged);
 
     connect(qApp, &QCoreApplication::aboutToQuit, this,&MusicPlayer::onAppAboutToQuit);
-    connect(&history, &HistoryList::historyListRemove,this,&MusicPlayer::historyListRemove);
+}
+
+void HistoryList::sendHistoryRemove(){
+    ///bug
+ emit historyListRemove(0);
 }

@@ -37,7 +37,9 @@ public:
             emit historyListRemove(history.size()-1);
         }
     }
-    signals:void historyListRemove(int index);
+    void sendHistoryRemove();
+    signals:
+    void historyListRemove(int index);
 };
 
 class MusicPlayer : public QObject
@@ -45,7 +47,9 @@ class MusicPlayer : public QObject
     Q_OBJECT
 public:
     MusicPlayer();
+    ~MusicPlayer();
 
+    QMediaPlayer *player;
     HistoryList history;
 
     void initMusicByDir(const QString &mediaPath);
@@ -77,7 +81,6 @@ public:
 private:
     void initConnect();
 
-    QMediaPlayer *player;
     const QString locallist = "locallist";
     const QString historylist = "historylist";
     QStringList musicExtensions = {"*.mp3", "*.wav", "*.flac", "*.aac"};
@@ -89,6 +92,7 @@ private:
 
 signals:
     void mediaSetted(const QString &dir);
+    ///用于addpath的信号
     void mediaListAdd();
     void mediaListSub(const QString &dir);
 signals:
@@ -102,9 +106,7 @@ signals:
 
 signals:
     void historyListChange(HistoryMData& item);
-signals:
-    void historyListRemove(int index);
-public slots:
+  public slots:
     void play(const QString& url);
 
     /// 负责向数据库上传路径并发送信号给musictable使其更新页面;

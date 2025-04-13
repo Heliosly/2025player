@@ -36,7 +36,8 @@ src/play/database.cpp\
     src/gui/shortcutmanager.cpp\
 src/gui/settingpage.cpp \
     src/play/videoplayer.cpp \
-    src/gui/uservector.cpp
+    src/gui/uservector.cpp \
+    src/gui/recommandpage.cpp
 
 RESOURCES += resources.qrc
 INCLUDEPATH += $$PWD/src/include
@@ -53,7 +54,8 @@ src/include/database.h \
     src/include/pathselector.h\
 src/include/settingpage.h \
     src/include/videoplayer.h \
-    src/include/uservector.h
+    src/include/uservector.h \
+    src/include/recommandpage.h
 DISTFILES +=
 
 debug{

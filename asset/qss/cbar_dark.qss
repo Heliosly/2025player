@@ -17,4 +17,5 @@ QFrame#control_bar {
     background-color:    #383838;
     border-radius:     25px;
 
+    color: white;
 }

@@ -1,8 +1,10 @@
-#include "videoplayer.h"
+﻿#include "videoplayer.h"
 #include <QVBoxLayout>
 #include<QDebug>
 #include<QMouseEvent>
 #include<QApplication>
+#include<QKeyEvent>
+/// --- PlaybackWorker 实现 ---
 VideoPlayer*VideoPlayer::s_instance = nullptr;
 VideoPlayer*VideoPlayer::instance()
 {
@@ -16,8 +18,14 @@ QtAV::AVPlayer* VideoPlayer::player(){
 }
 VideoPlayer::VideoPlayer()   {
     m_timer = new QTimer(this);
-       m_timer->setSingleShot(true);
-       connect(m_timer, &QTimer::timeout, this, &VideoPlayer::handleSingleClick);
+    m_timer->setSingleShot(true);
+    m_timer1= new QTimer(this);
+    m_timer1->setInterval(3000);
+
+    DTitlebar * titleBar= this->titlebar();
+    titleBar->setMenuVisible(false);
+    connect(m_timer, &QTimer::timeout, this, &VideoPlayer::handleSingleClick);
+
     // 初始化播放器
     m_player = new QtAV::AVPlayer(this);
 
@@ -27,27 +35,154 @@ VideoPlayer::VideoPlayer()   {
         DMessageBox::critical(nullptr, "Error", "Failed to create video renderer!");
         return;
     }
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->addWidget(m_videoOutput->widget());
-    setLayout(mainLayout);
-    m_videoOutput->widget()->installEventFilter(this);
+    auto widget = m_videoOutput->widget();
 
-    // 绑定播放器和渲染器
+    widget->setParent(nullptr);
+   widget->setWindowFlags(Qt::Window);
+
     m_player->setRenderer(m_videoOutput);
+    QVBoxLayout * layout = new QVBoxLayout;
+    widget->setLayout(layout);
+    layout->setContentsMargins(0, 0, 0, 20);
+    layout->setSpacing(0);
 
-    // 连接信号槽
+    layout->addStretch(8);
+    QHBoxLayout* DownHLayout= new QHBoxLayout;
+    m_controlBar = new ControlBar(this,true);
+    m_controlBar->isVideo=true;
+    m_controlBar->shiftThemeIcon(false);
+    widget->setMouseTracking(true);
+
+
+
+    DownHLayout->addWidget(m_controlBar);
+    DownHLayout->setContentsMargins(20,0,20,3);
+
+    layout->addLayout(DownHLayout, 1);
+
     connect(m_player, &QtAV::AVPlayer::positionChanged, this, &VideoPlayer::positionChanged);
     connect(m_player, &QtAV::AVPlayer::durationChanged, this, &VideoPlayer::durationChanged);
     connect(m_player, &QtAV::AVPlayer::stateChanged, this, &VideoPlayer::stateChanged);
-//    connect(m_player, &QtAV::AVPlayer::error, this, [this](const QtAV::AVError &err) {
-//        emit errorOccurred(err.string());
-//    });
-    connect(m_player, &QtAV::AVPlayer::mediaStatusChanged, this,&VideoPlayer::mediaStatusChanged);
+    //    connect(m_player, &QtAV::AVPlayer::error, this, [this](const QtAV::AVError &err) {
+    //        emit errorOccurred(err.string());
+    //    });
+
+    connect(m_player, &QtAV::AVPlayer::mediaStatusChanged, this,&VideoPlayer::onMediaChange);
+    connect(m_timer1, &QTimer::timeout, this, &VideoPlayer::hideControlBar);
+    connect(m_player,&QtAV::AVPlayer::started,this,&VideoPlayer::onStarted);
+
+    connect(m_player,&QtAV::AVPlayer::stopped,this,&VideoPlayer::onStopped);
+    installEventFilter(this);
+    widget->installEventFilter(this);
+    m_controlBar->installEventFilter(this);
+
+
+}
+void VideoPlayer::closeEvent(QCloseEvent *event) {
+    event->ignore();
+    hide();
+    emit toCloseVideo();
+}// —— 捕获中央 videoWidget & controlBar 的鼠标事件
+bool VideoPlayer::eventFilter(QObject *obj, QEvent *event) {
+
+    // 视频区双击切换全屏
+    if (obj ==widget()) {
+        if(event->type()==QEvent::Close){
+              event->ignore();
+    widget()->hide();
+    emit toCloseVideo();
+return true;
+        }
+        if (event->type() == QEvent::MouseButtonDblClick) {
+            m_timer->stop();
+            onShiftScreen();
+            return true;
+        }
+        if (event->type() == QEvent::MouseButtonPress) {
+            auto *me = static_cast<QMouseEvent*>(event);
+            if (me->button() == Qt::LeftButton)
+                m_timer->start(QApplication::doubleClickInterval());
+            return false;
+        }
+           }
+       if (event->type() == QEvent::MouseMove) {
+            showControlBar();
+            m_timer1->start();
+                   }
+
+    return DMainWindow::eventFilter(obj, event);
+}
+
+void VideoPlayer::showControlBar() {
+    if (!m_controlBar->isVisible())
+    {
+        m_controlBar->setVisible(true);
+    }
+}
+void VideoPlayer::hideControlBar() {
+    m_controlBar->setVisible(false);
+
+}
+void VideoPlayer::handleSingleClick()
+{
+    if(m_player->isPlaying()){
+        play();
+    }
+    else{
+        pause();
+    }
+}
+void VideoPlayer::onShiftScreen(){
+
+    if(isFull){
+
+      widget()-> showNormal()
+                        ;    }
+    else{
+      widget()-> showFullScreen();
+
+    }
+    isFull^=1;
+}
+void VideoPlayer::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Escape && isFull) {
+       widget()->showNormal();
+        isFull = false;
+        event->accept();
+        return;
+    }
+    DMainWindow::keyPressEvent(event);
+}
+void VideoPlayer::mouseMoveEvent(QMouseEvent *event)
+{
+    showControlBar();
+    m_timer1->start();
+    DMainWindow::mouseMoveEvent(event);
+}
+
+// 播放指定文件
+// 第一次播放并打开窗口
+void VideoPlayer::play(const QString &url) {
+
+    m_urlList.push_back(url);
+    if(m_isPlaying)
+    m_player->stop();
+    else{
+          filePath=url;
+    m_player->play(url);
+    qDebug()<<url;
+    manualStopped=0;
+    emit toShowVideo();
+
+    m_timer1->start();
+
+    }
 
 }
 
 bool VideoPlayer::isPlaying(){
-return m_player->isPlaying();
+    return m_isPlaying;
 }
 VideoPlayer::~VideoPlayer() {
     stop();
@@ -55,12 +190,11 @@ VideoPlayer::~VideoPlayer() {
     delete m_player;
 }
 
-// 播放指定文件
-void VideoPlayer::play(const QString &url) {
-    m_player->stop();
-    m_player->play(url);
-    qDebug()<<url;
-    manualStopped=0;
+void VideoPlayer::closeVideoPage(){
+
+    emit toCloseVideo();
+
+
 }
 
 // 继续播放
@@ -79,10 +213,13 @@ void VideoPlayer::play() {
 void VideoPlayer::pause() {
     m_player->pause(true);
 
+
 }
 // 停止
 void VideoPlayer::stop() {
     manualStopped=1;
+
+    m_timer1->stop();
     m_player->stop();
 }
 
@@ -119,39 +256,42 @@ QtAV::AVPlayer::State VideoPlayer::state() const {
 QWidget* VideoPlayer::widget(){
     return m_videoOutput->widget();
 }
+void VideoPlayer::onMediaChange(QtAV::MediaStatus state){
+   emit mediaStatusChanged(state);
 
-void VideoPlayer::shiftScreen(bool isFull){
-    if(isFull){
-        m_videoOutput->widget()->showNormal();
-    }else{
-        m_videoOutput->widget()->showFullScreen();
-    }
 }
-bool VideoPlayer::eventFilter(QObject *obj, QEvent *event)
-{
-    if ( event->type() == QEvent::MouseButtonDblClick) {
-        m_timer->stop();
-        emit toShiftScreen();
-        return true; // 事件已处理
-    } else if (event->type() == QEvent::MouseButtonPress) {
-        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
-        if (mouseEvent->button() == Qt::LeftButton) {
-            m_timer->start(QApplication::doubleClickInterval());
+
+void VideoPlayer::onStarted(){
+    m_isPlaying=1;
+
+        auto duration = m_player->duration();
+            QString title = QFileInfo(filePath).completeBaseName();
+
+       MusicPlayer::instance(). history.addToHistory(
+                    HistoryMData(filePath,
+                                 title, duration/1000));
+
+        emit historyListChange(MusicPlayer::instance().history.history.first());
 
 
-
-        }
-        return true;
-    }
-
-    return QWidget::eventFilter(obj, event);
+   emit videoStarted();
 }
-void VideoPlayer::handleSingleClick()
-{
-    if(m_player->isPlaying()){
-        play();
+void VideoPlayer::onStopped(){
+
+    m_isPlaying=0;
+    if(!m_urlList.empty()){
+     auto url = m_urlList.front();
+     m_urlList.pop_front();
+    filePath=url;
+    m_player->play(url);
+    qDebug()<<url;
+    manualStopped=0;
+    emit toShowVideo();
+
+    m_timer1->start();
+
     }
-    else{
-        pause();
-    }
-  }
+
+    emit videoStopped();
+
+}

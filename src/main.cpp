@@ -26,11 +26,11 @@ int main(int argc, char *argv[])
     qRegisterMetaType<MetaData>("MetaData"); // 如果信号参数是引用
     QLoggingCategory::defaultCategory()->setEnabled(QtDebugMsg, true);
     a.setOrganizationName("deepin");
-    a.setApplicationName("dtk-application");
+    a.setApplicationName("2025player");
     a.setApplicationVersion("1.0");
     a.setProductIcon(QIcon(":/images/logo.png"));
-    a.setProductName("Dtk Application");
-    a.setApplicationDescription("This is a dtk template application.");
+    a.setProductName("2025player");
+    a.setApplicationDescription("This is a mediaplayer.");
     //a.loadTranslator();
     a.setApplicationDisplayName(QCoreApplication::translate("Main", "DTK Application"));
     DApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);

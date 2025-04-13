@@ -17,8 +17,6 @@ PathSelector::PathSelector(DWidget *parent)
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
     mainLayout->setSpacing(8);
-
-     
      
     // 创建按钮和菜单
     menu = new DMenu(this);// 设置菜单宽度与 pathButton 一致
@@ -46,9 +44,20 @@ void PathSelector::initUpdateMenu()
     menu->clear();
 
     // 遍历每个路径，创建自定义菜单项a
+
+      QtConcurrent::run([]() {
+
+    for (const QString &path :SettingsManager::instance()->paths) {
+
+        MusicPlayer::instance().initMusicByDir(path);
+    }
+
+        emit MusicPlayer::instance().mediaListAdd();
+      });
+
     for (const QString &path :SettingsManager::instance()->paths) {
        //以这种方式加载路径
-        MusicPlayer::instance().initMusicByDir(path);
+
         DWidget *itemWidget = new DWidget(this);
         QHBoxLayout *itemLayout = new QHBoxLayout(itemWidget);
         itemLayout->setContentsMargins(8, 4, 8, 4);
