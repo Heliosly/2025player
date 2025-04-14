@@ -2,8 +2,6 @@
 #include<DApplicationHelper>
 MainWindow::~MainWindow() {
 
-    delete &MusicPlayer::instance();
-    delete DataBase::instance();
 
 }
 MainWindow::MainWindow()

@@ -3,6 +3,7 @@
 #define MUSICPLAYER_H
 #include "database.h"
 #include "metadata.h"
+#include"videoplayer.h"
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
 #include <QWidget>

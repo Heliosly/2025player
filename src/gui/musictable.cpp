@@ -1,4 +1,6 @@
 #include <QFileIconProvider>
+
+#include"musicplayer.h"
 #include"uservector.h"
 #include"videoplayer.h"
 #include "pathselector.h"
@@ -106,8 +108,8 @@ void MusicTable::deleteByDir(const QString &dir){
         if(UserPreference::instance()->temp)
         UserPreference::instance()->temp->setDefaultLabeltText("无音乐");
     }
-    int end=*dirIndex.rbegin();
-    for (auto row  = dirIndex.rbegin(); row != dirIndex.rend(); ++row) {
+    int end=*dirIndex.begin();
+    for (auto row  = dirIndex.begin(); row != dirIndex.end(); ++row) {
         QStandardItem *item = musicListModel->takeItem(*row);  // 从模型中取出项
         if (item) {
             delete item;  // 释放内存
@@ -121,9 +123,7 @@ void MusicTable::deleteByDir(const QString &dir){
             }
     }
 
- qDebug()<<"trace2";
     dirToIndex.remove(dir);
-    resetVideoTable();
 
 
 }
@@ -183,6 +183,7 @@ void MusicTable::setMusicCount(int value)
     music_table->verticalScrollBar()->setValue(value);
     m_totalRows=value;
     qDebug()<<"m_totleRows:"<<value;
+    loadMoreData();
 }
 void MusicTable::initSource(){
     pathSelector = new PathSelector(this);
@@ -198,8 +199,8 @@ void MusicTable::initItem()
     delegate = new TableItemDelegate(music_table);
     music_table->setItemDelegate(delegate);
 
-    setMusicCount (DataBase::instance()->getListCount("locallist"));
     setLoadParameters(0, 50); // 每次加载 50 行
+    setMusicCount (DataBase::instance()->getListCount("locallist"));
     QList<QString> tableList; //
 
     tableList << "#" << "音乐标题" << "专辑" << "时长";
@@ -220,11 +221,7 @@ void MusicTable::initItem()
     // 设置垂直滚动条最小宽度
     music_table->verticalScrollBar()->setMaximumWidth(7);
     music_table->setResizeMode(QListView::Adjust);
-    if(m_totalRows)loadMoreData();
-    else {
-        m_loaded=true;
-    }
-    video_table = new DListView(this);
+       video_table = new DListView(this);
     normalDelegate = new normalItemDelegate(this);
     video_table->setItemDelegate(normalDelegate);
     video_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -685,7 +682,6 @@ void MusicTable::resetMusicTable()
     m_loaded=0;
     setMusicCount(DataBase::instance()->getListCount("locallist"));
     emit toResizeWidget();
-    resetVideoTable();
 
 
 
@@ -695,8 +691,6 @@ void MusicTable::resetVideoTable()
     clearVideoTable();
     loadVideoTable();
 
- qDebug()<<"trace3";
-//    checkIsEmpty();
 
 }
 
@@ -908,34 +902,62 @@ void MusicTable::checkIsEmpty(){
 }
 // MusicTable.cpp
 void MusicTable::toApi() {
-    if (!enableFavorite) return;
 
-    // 重置终止标志
-    {
-        QMutexLocker locker(&m_mutex);
-        m_abort = false;
-    }
+    if (!enableFavorite) return;
 
     // 使用QFuture保存任务句柄
     m_future = QtConcurrent::run([this]() {
-        QMutexLocker locker(&m_mutex);
-        if (musicUrlList.isEmpty()) return;
+        bool temp=0;
+        QStringList tempList;
+        {
+            QMutexLocker locker(&m_mutex);
+            m_abort = false;
 
-        // 遍历时使用临时副本防止迭代器失效
-        auto tempList = musicUrlList;
-        musicUrlList.clear();
-        for (const auto& url : tempList) {
+            if (musicUrlList.isEmpty()) return;
+
+            tempList = musicUrlList;
+        }
+
+
+        for (auto i = tempList.begin();i<tempList.end();i++) {
+            const auto &url =*i;
             // 检查终止标志
             {
                 QMutexLocker locker(&m_mutex);
-                if (m_abort) break;
+                if (m_abort) temp=1;
             }
 
+            if(temp)
+            {
+                QStringList rollBackList;
+                for (auto j = tempList.begin(); j < i; ++j) {
+                    const auto& rollbackUrl = *j;
+                    rollBackList.append(rollbackUrl);
+                    musicFavority.remove(rollbackUrl);
+                }
+                UserPreference::instance()->rollBackByUrlList(rollBackList);
+
+//        DataBase::instance()->cleanupThreadDatabase();
+                break;
+            }
             // API请求
             auto a = DataBase::instance()->toApi(url);
               {
                 QMutexLocker locker(&m_mutex);
-                if (m_abort) break;
+                if (m_abort) temp=1;
+            }
+  if(temp)
+            {
+                QStringList rollBackList;
+                for (auto j = tempList.begin(); j <= i; ++j) {
+                    const auto& rollbackUrl = *j;
+                    rollBackList.append(rollbackUrl);
+                    musicFavority.remove(rollbackUrl);
+                }
+                UserPreference::instance()->rollBackByUrlList(rollBackList);
+
+//        DataBase::instance()->cleanupThreadDatabase();
+                break;
             }
 
             if (a.isEmpty()) {
@@ -949,6 +971,10 @@ void MusicTable::toApi() {
                 }, Qt::QueuedConnection);
                 continue;
             }
+           {
+                QMutexLocker locker(&m_mutex);
+                musicUrlList.clear();
+           }
 
             // 数据处理
             auto features = DataBase::instance()->parseTagsToOrderedList(a);
@@ -956,6 +982,7 @@ void MusicTable::toApi() {
             UserPreference::instance()->cosineSimilarity(features, url);
         }
 
+//        DataBase::instance()->cleanupThreadDatabase();
         // 完成后通知（仅当未中断时）
         QMetaObject::invokeMethod(this, [this]() {
             if (!m_abort) {
@@ -976,8 +1003,8 @@ void MusicTable::cancelTask() {
     {
         QMutexLocker locker(&m_mutex);
         m_abort = true;
+
     }
 
       // 清理已处理数据（根据需求决定）
-    musicUrlList.clear();
 }

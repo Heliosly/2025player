@@ -2,7 +2,8 @@ QT += core gui dtkwidget
 QT += multimedia
 QT += sql
 QT += charts
-INCLUDEPATH += /usr/include/taglib 
+CONFIG += c++17 rtti
+INCLUDEPATH += /usr/include/taglib
 
 INCLUDEPATH += /usr/include/x86_64-linux-gnu/qt5/QtAV
 INCLUDEPATH +=/usr/local/include

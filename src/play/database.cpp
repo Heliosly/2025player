@@ -58,19 +58,37 @@ bool DataBase::reSetListCount(){
 
 bool DataBase::createConnection(const QString dataBase_Name)
 {
-    QString buildPath = QCoreApplication::applicationDirPath() + "/build";
+    // 使用用户主目录路径替代 '~'
+    QString buildPath = QDir::homePath() + "/.local/share/2025player/";
     QDir().mkpath(buildPath); // 确保目录存在
 
     // 仅在主线程中使用一个固定的连接名
     db = QSqlDatabase::addDatabase("QSQLITE", "conToMetaData");
     db.setDatabaseName(buildPath + "/" + dataBase_Name + ".db");
+
+    // 打开数据库连接
     if (!db.open()) {
         qDebug() << "Error: Failed to connect database." << db.lastError();
         return false;
-    } else {
-        return true;
     }
+
+    QSqlQuery pragmaQuery(db);
+
+    // 1. 切换到 WAL 模式（写前日志）
+    if (pragmaQuery.exec("PRAGMA journal_mode=WAL")) {
+        qDebug() << "WAL mode enabled";
+    } else {
+        qDebug() << "Failed to set WAL mode:" << pragmaQuery.lastError().text();
+    }
+
+    // 2. 可选：设置同步级别为 NORMAL，减少磁盘 I/O 提升性能
+    if (!pragmaQuery.exec("PRAGMA synchronous=NORMAL")) {
+        qDebug() << "Failed to set synchronous mode:" << pragmaQuery.lastError().text();
+    }
+
+    return true;
 }
+
 
 int DataBase::getListCount(const QString &playListName) {
     QSqlDatabase localDb = getThreadDatabase();
@@ -94,7 +112,7 @@ bool DataBase::createFilePathTable()
     QSqlQuery sql_query(localDb);
     QString sqlStatement = "CREATE TABLE IF NOT EXISTS filepath_table ("
                            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                           "dirpath TEXT NOT NULL UNIQUE);";
+                           "dirPath TEXT NOT NULL UNIQUE);";
     if (!sql_query.exec(sqlStatement)) {
         qDebug() << "创建文件路径表失败：" << sql_query.lastError();
         return false;
@@ -161,37 +179,37 @@ bool DataBase::saveMetaData(const QMap<QString, QString> &metaDataMap, const QPi
 {
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
-    QString dirpath, filePath, title, artist, album, duration;
+    QString dirPath, filePath, title, artist, album, duration;
     QByteArray poster;
     QBuffer buffer(&poster);
     buffer.open(QIODevice::WriteOnly);
     img.save(&buffer, "PNG");
 
     for (auto it = metaDataMap.constBegin(); it != metaDataMap.constEnd(); ++it) {
-        if      (it.key() == "dirpath")  { dirpath = it.value(); }
-        else if (it.key() == "filepath") { filePath = it.value(); }
+        if      (it.key() == "dirPath")  { dirPath = it.value(); }
+        else if (it.key() == "filePath") { filePath = it.value(); }
         else if (it.key() == "title")    { title = it.value(); }
         else if (it.key() == "artist")   { artist = it.value(); }
         else if (it.key() == "album")    { album = it.value(); }
         else if (it.key() == "duration") { duration = it.value(); }
     }
-    if (dirpath.isNull() || filePath.isNull()) {
+    if (dirPath.isNull() || filePath.isNull()) {
         return false;
     }
 
-    if (!addFilePath(dirpath)) {
+    if (!addFilePath(dirPath)) {
         return false;
     }
 
-    sql_query.prepare("SELECT id FROM filepath_table WHERE dirpath = :dirpath;");
-    sql_query.bindValue(":dirpath", dirpath);
+    sql_query.prepare("SELECT id FROM filepath_table WHERE dirPath = :dirPath;");
+    sql_query.bindValue(":dirPath", dirPath);
     if (!sql_query.exec() || !sql_query.next()) {
         qDebug() << "获取文件夹路径 ID 失败：" << sql_query.lastError();
         return false;
     }
     int dirpathId = sql_query.value(0).toInt();
 
-    QString sqlStatementDelete = "DELETE FROM locallist WHERE filePath = :filepath";
+    QString sqlStatementDelete = "DELETE FROM locallist WHERE filePath = :filePath";
     sql_query.prepare(sqlStatementDelete);
     sql_query.bindValue(":filePath", filePath);
     if (!sql_query.exec()) {
@@ -252,6 +270,7 @@ QJsonArray DataBase::getTagsArrayByUrl(const QString &filePath)
 QJsonArray DataBase::toApi(const QString &filePath)
 {
 
+    qDebug()<<"trace5.5";
     if (checkUrlExistsInTags(filePath)) {
 
     qDebug()<<"read success "<<filePath;
@@ -422,7 +441,7 @@ bool DataBase::saveHistoryData(
         QString dirPath = fileInfo.absolutePath();
     QSqlQuery q2(db);
 
-    q2.prepare("SELECT id FROM filepath_table WHERE dirpath = :dirPath");
+    q2.prepare("SELECT id FROM filepath_table WHERE dirPath = :dirPath");
     q2.bindValue(":dirPath", dirPath);
     if (!q2.exec() || !q2.next()) {
         qDebug() << "获取 dirpath_id 失败：" << q2.lastError();
@@ -467,7 +486,7 @@ void DataBase::clearTable(const QString &playListName) {
 
      QStringList urlList;
 
-     sqlStatement = QString("SELECT filepath_table.dirpath || '/' || %1.filepath AS fullpath FROM %1 "
+     sqlStatement = QString("SELECT filepath_table.dirPath || '/' || %1.filePath AS fullpath FROM %1 "
                             "INNER JOIN filepath_table ON %1.dirpath_id = filepath_table.id;").arg(playListName);
      if (!sql_query.exec(sqlStatement)) {
          qDebug() << "无法获取到歌单中所有歌曲的路径：" << playListName << sql_query.lastError();
@@ -533,12 +552,12 @@ bool DataBase::queryByUrl(const QString &url, const QString &playListName, QMap<
     return false;
 }
 
-bool DataBase::addFilePath(const QString &dirpath)
+bool DataBase::addFilePath(const QString &dirPath)
 {
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
-    sql_query.prepare("INSERT OR IGNORE INTO filepath_table (dirpath) VALUES (:dirpath);");
-    sql_query.bindValue(":dirpath", dirpath);
+    sql_query.prepare("INSERT OR IGNORE INTO filepath_table (dirPath) VALUES (:dirPath);");
+    sql_query.bindValue(":dirPath", dirPath);
     if (!sql_query.exec()) {
         qDebug() << "插入文件夹路径失败：" << sql_query.lastError();
         return false;
@@ -546,14 +565,14 @@ bool DataBase::addFilePath(const QString &dirpath)
     return true;
 }
 
-bool DataBase::deleteByDirPath(const QString &dirpath, const QString &playListName)
+bool DataBase::deleteByDirPath(const QString &dirPath, const QString &playListName)
 {
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
 
-    // 获取 dirpath 对应的 id
-    sql_query.prepare("SELECT id FROM filepath_table WHERE dirpath = :dirpath;");
-    sql_query.bindValue(":dirpath", dirpath);
+    // 获取 dirPath 对应的 id
+    sql_query.prepare("SELECT id FROM filepath_table WHERE dirPath = :dirPath;");
+    sql_query.bindValue(":dirPath", dirPath);
     if (!sql_query.exec() || !sql_query.next()) {
         qDebug() << "获取文件夹路径 ID 失败：" << sql_query.lastError();
         return false;
@@ -565,7 +584,7 @@ bool DataBase::deleteByDirPath(const QString &dirpath, const QString &playListNa
     sql_query.prepare(sqlStatement);
     sql_query.bindValue(":dirpath_id", dirpathId);
     if (!sql_query.exec()) {
-        qDebug() << "删除与 dirpath 相关的记录失败：" << playListName << sql_query.lastError();
+        qDebug() << "删除与 dirPath 相关的记录失败：" << playListName << sql_query.lastError();
         return false;
     }
 
@@ -596,6 +615,9 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
     }
 
     // 解析查询结果
+    if(!localDb.isValid()){
+        qDebug()<<"unvia";
+    }
     while (sql_query.next()) {
         QString filePath = sql_query.value("filePath").toString();
         QString title = sql_query.value("title").toString();
@@ -665,3 +687,30 @@ MetaData DataBase::getMetaDataByUrl(const QString &url)
     return metaData;
 }
 
+//// 在每个线程真正结束前，调用下面这个清理函数
+//void DataBase::cleanupThreadDatabase() {
+//    if (threadDatabase.hasLocalData()) {
+//        QSqlDatabase db = threadDatabase.localData();
+//        QString connName = db.connectionName();
+
+//        db.close();
+//        // 从全局连接池中移除
+//        QSqlDatabase::removeDatabase(connName);
+//    }
+//}
+void DataBase::cleanupThreadDatabase() {
+    if (threadDatabase.hasLocalData()) {
+        QSqlDatabase db = threadDatabase.localData();
+        QString connName = db.connectionName();
+
+        if (db.isOpen()) {
+            db.close();  // 关闭连接
+            // 确保连接已经完全关闭
+            while (db.isOpen()) {
+                QThread::msleep(10);  // 等待连接关闭
+            }
+        }
+
+        QSqlDatabase::removeDatabase(connName);  // 移除数据库连接
+    }
+}

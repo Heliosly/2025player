@@ -1,6 +1,7 @@
 #ifndef USERVECTOR_H
 #define USERVECTOR_H
 
+#include <QMutex>
 #include <QList>
 #include <QPair>
 #include <QString>
@@ -10,6 +11,7 @@
 #include<queue>
 #include<vector>
 #include<DLabel>
+#include"recommandpage.h"
 QT_CHARTS_USE_NAMESPACE
 DWIDGET_USE_NAMESPACE
 
@@ -25,6 +27,7 @@ class UserPreference :public QObject{
     Q_OBJECT
 public:
 
+    friend class RecommandPage;
     std::priority_queue<QPair<QString, qreal>, std::vector<QPair<QString, qreal>>, CompareQPair> similarity;
     PieChartWidget * temp=nullptr;
         static UserPreference* instance();
@@ -46,9 +49,11 @@ public:
 void reWrite();
 
     void emitLoadSomeMusicMedia();
+    void rollBackByUrlList(const QStringList & urlList);
 
 private:
-
+  //暂时用于锁优先队列
+    QMutex m_mutex;
     UserPreference();
     static UserPreference *s_instance;
     // 用户喜好向量（固定50维）

@@ -131,8 +131,12 @@ qreal UserPreference::cosineSimilarity(const QList<QPair<QString, qreal>>& candi
     }
     normUser = std::sqrt(normUser);
     if (normUser == 0.0 || normCandidate == 0.0) return 0.0;
-    similarity.push(qMakePair(url, dot / (normUser * normCandidate)));
 
+    {
+
+        QMutexLocker locker(&m_mutex);
+        similarity.push(qMakePair(url, dot / (normUser * normCandidate)));
+     }
 
 
     return dot / (normUser * normCandidate);
@@ -287,4 +291,36 @@ void PieChartWidget::changeStackLayout(int index){
 void PieChartWidget::setDefaultLabeltText(const QString &text){
     if(defaultLabel)
     defaultLabel->setText(text);
+}
+
+void UserPreference::rollBackByUrlList(const QStringList & urlList){
+       QSet<QString> urlSet = QSet<QString>::fromList(urlList);
+
+       // 临时构建一个新的优先队列
+       std::priority_queue<QPair<QString, qreal>, std::vector<QPair<QString, qreal>>, CompareQPair> newQueue;
+
+       // 临时存储旧队列的数据
+       std::vector<QPair<QString, qreal>> tempData;
+ {
+
+        QMutexLocker locker(&m_mutex);
+
+       // 先把原有的数据全部pop出来（不能直接遍历priority_queue）
+       while (!similarity.empty()) {
+           auto item = similarity.top();
+           similarity.pop();
+           // 如果不在 urlSet 中，就加入新的队列
+           if (!urlSet.contains(item.first)) {
+               tempData.push_back(item);
+           }
+       }
+
+       // 放回新的队列
+       for (const auto &item : tempData) {
+           newQueue.push(item);
+       }
+
+       // 替换旧队列
+       similarity = std::move(newQueue);
+  }
 }

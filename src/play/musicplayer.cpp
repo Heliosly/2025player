@@ -19,7 +19,6 @@ MusicPlayer::MusicPlayer()
 
 
     player=new QMediaPlayer;
-    //QtConcurrent::run([this]() {  });
     readHistoryList();
     connect(player, &QMediaPlayer::mediaStatusChanged, this,&MusicPlayer::onMediaChange);
 
@@ -28,6 +27,7 @@ MusicPlayer::MusicPlayer()
 }
 MusicPlayer::~MusicPlayer(){
 //TODO
+     disconnect();
 }
 void MusicPlayer::play(const QString& url){
     if(QFile::exists(url)){
@@ -277,8 +277,8 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
         duration=0;
     }
       QMap<QString, QString> metaDataMap;
-    metaDataMap.insert("dirpath", dir);
-    metaDataMap.insert("filepath", url);
+    metaDataMap.insert("dirPath", dir);
+    metaDataMap.insert("filePath", url);
     metaDataMap.insert("title", title);
     metaDataMap.insert("artist", artist);
     metaDataMap.insert("album", album);
@@ -381,8 +381,8 @@ void MusicPlayer::loadLocalMusic(const QString &url,const QString &dir) {
         title = fileInfo.baseName()
                         ;    }
     QMap<QString, QString> metaDataMap;
-    metaDataMap.insert("dirpath", dir);
-    metaDataMap.insert("filepath", url);
+    metaDataMap.insert("dirPath", dir);
+    metaDataMap.insert("filePath", url);
     metaDataMap.insert("title", title);
     metaDataMap.insert("artist", artist);
     metaDataMap.insert("album", album);
@@ -427,6 +427,8 @@ void MusicPlayer::uninstallPath(const QString &filePath) {
         DataBase::instance()->reSetListCount();
                 emit mediaListSub(filePath);
         }
+
+//        DataBase::instance()->cleanupThreadDatabase();
     });
 }
 
@@ -435,6 +437,8 @@ void MusicPlayer::installPath(const QString & filePath){
     QtConcurrent::run([this, filePath]() {
         addPathToDB(filePath);
         DataBase::instance()->reSetListCount();
+
+//        DataBase::instance()->cleanupThreadDatabase();
             emit mediaListAdd();
     });
 }

@@ -106,56 +106,77 @@ void RecommandPage::playMusicFromIndex(int index){
 
 }
 
-void RecommandPage::refreshList(){
+void RecommandPage::refreshList() {
+    // 1. 先把整个 priority_queue 在短暂锁内复制一份到本地
+    std::priority_queue<
+        QPair<QString, qreal>,
+        std::vector<QPair<QString, qreal>>,
+        CompareQPair
+    > localSim;
+    {
+        QMutexLocker locker(&UserPreference::instance()->m_mutex);
+        localSim = UserPreference::instance()->similarity;
+    } //  锁在这里就释放了
 
-    auto similarity = UserPreference::instance()->similarity;
+    // 2. 清 UI 模型
     model->clear();
-    topCandidates.clear();
-    // 第1阶段：取出前10首，加折损
+
+    // 3. 第一阶段：取出前10条并做衰减
     QVector<QPair<QString, qreal>> topCandidates;
-    for (int i = 0; i < 10 && !similarity.empty(); ++i) {
-        auto temp = similarity.top();
-        similarity.pop();
-
-        QString song = temp.first;
-        qreal score = temp.second;
-
-        int count = playedCount.value(song, 0);
-        if (count > 0) score *= this->decayFactor(count);
-
+    for (int i = 0; i < 10 && !localSim.empty(); ++i) {
+        auto [song, score] = localSim.top();
+        localSim.pop();
+        int cnt = playedCount.value(song, 0);
+        if (cnt > 0) score *= decayFactor(cnt);
         topCandidates.push_back(qMakePair(song, score));
     }
-    for (const auto &p : topCandidates)
-        similarity.push(p);
+    // 把它们再塞回 localSim，以便第二阶段使用
+    for (auto &p : topCandidates) {
+        localSim.push(p);
+    }
 
-    // 冷却处理
+    // 4. 冷却：上轮推荐 → 本轮推荐
     lastRoundRecommended = thisRoundRecommended;
     thisRoundRecommended.clear();
 
-    // 推荐阶段
+    // 5. 第二阶段：从 localSim 中拿出最多5条新推荐
     int added = 0;
-    while (!similarity.empty() && added < 5) {
-        auto [song, sim] = similarity.top();
-                        similarity.pop();
-
-                        if (lastRoundRecommended.contains(song)) continue;
-
-                        thisRoundRecommended.insert(song);
-                        MetaData data = DataBase::instance()->getMetaDataByUrl(song);
-
-                        auto *item = new DStandardItem();
-                        item->setIcon(paintRadius(data.covpix, pixSize.width(), pixSize.height(), 18));
-                        item->setText(data.title);
-                        item->setData(data.url, Qt::UserRole + 1);
-                        model->appendRow(item);
-
-                        added++;
-                   }
- qDebug()<<"trace1";
-
+    QVector<QPair<QString, qreal>> recList;
+    while (!localSim.empty() && added < 5) {
+        auto [song, sim] = localSim.top();
+        localSim.pop();
+        if (lastRoundRecommended.contains(song)) continue;
+        recList.push_back(qMakePair(song, sim));
+        thisRoundRecommended.insert(song);
+        ++added;
     }
 
-                        QPixmap RecommandPage::paintRadius(QPixmap sourcePixmap,int width,int height,int radius){
+    // 6. 更新 UI（完全在无锁状态下）
+    for (auto &p : recList) {
+        MetaData data = DataBase::instance()->getMetaDataByUrl(p.first);
+        auto *item = new DStandardItem();
+        item->setIcon(paintRadius(data.covpix,
+                                 pixSize.width(),
+                                 pixSize.height(),
+                                 18));
+        item->setText(data.title);
+        item->setData(data.url, Qt::UserRole + 1);
+        model->appendRow(item);
+    }
+    qDebug() << "trace1";
+
+    // 7. 最后再短暂加锁检查原队列是否已空
+    bool isEmpty;
+    {
+        QMutexLocker locker(&UserPreference::instance()->m_mutex);
+        isEmpty = UserPreference::instance()->similarity.empty();
+    }
+    if (isEmpty) {
+        UserPreference::instance()->temp->changeStackLayout(1);
+    }
+}
+
+QPixmap RecommandPage::paintRadius(QPixmap sourcePixmap,int width,int height,int radius){
             int margin = 10;
             // 生成目标 pixmap 尺寸：图片区域加上 margin
             QPixmap roundedPixmap(width + 2 * margin, height + 2 * margin);
@@ -185,46 +206,48 @@ void RecommandPage::refreshList(){
 
 void RecommandPage::deleteByDir(const QString &dir){
 
-    m_recommandMutex=1;
-//    QtConcurrent::run([this,dir]() {
-           auto& similarity = UserPreference::instance()->similarity;
+    auto& similarity = UserPreference::instance()->similarity;
+      QMutex& mutex = UserPreference::instance()->m_mutex;
 
-           // 临时 vector 保存保留项
-           std::vector<QPair<QString, qreal>> retainedItems;
+      // 临时 vector 保存保留项
+      std::vector<QPair<QString, qreal>> retainedItems;
 
-           // 弹出并筛选
-           while (!similarity.empty()) {
-               const auto& pair = similarity.top();
-               QFileInfo fileInfo(pair.first);
-               if (fileInfo.absolutePath() != dir) {
-                   retainedItems.push_back(pair);
-               }
-               similarity.pop();
-           }
-
-           // 重新压入保留项
-           for (const auto& item : retainedItems) {
-               similarity.push(item);
-           }
-
-          m_recommandMutex=0;
-                   this->refreshList();
-           qDebug() << "[RecommandPage] Deleted similarity items in dir:" << dir;
-            if(similarity.empty()){
-
-//                QMetaObject::invokeMethod(this, [=]() {
-                     UserPreference::instance()->temp->changeStackLayout(1);
-
-//                }, Qt::QueuedConnection);
-
-
-
-
+      // 提取阶段，只锁读取和 pop
+      while (true) {
+          QPair<QString, qreal> pair;
+          {
+              QMutexLocker locker(&mutex);
+              if (similarity.empty()) break;
+              pair = similarity.top();
+              similarity.pop();
           }
 
-//       });
+          // 判断是否保留
+          QFileInfo fileInfo(pair.first);
+          if (fileInfo.absolutePath() != dir) {
+              retainedItems.push_back(pair);
+          }
+      }
 
-        }
+      // 重压阶段，只锁 push
+      {
+          QMutexLocker locker(&mutex);
+          for (const auto& item : retainedItems) {
+              similarity.push(item);
+          }
+      }
+
+      this->refreshList();
+      qDebug() << "[RecommandPage] Deleted similarity items in dir:" << dir;
+
+      {
+          QMutexLocker locker(&mutex);
+          if (similarity.empty()) {
+              UserPreference::instance()->temp->changeStackLayout(1);
+          }
+      }
+
+}
 
 
 void RecommandPage::onThemeChange(DGuiApplicationHelper::ColorType type){

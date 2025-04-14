@@ -52,7 +52,10 @@ void PathSelector::initUpdateMenu()
         MusicPlayer::instance().initMusicByDir(path);
     }
 
+
         emit MusicPlayer::instance().mediaListAdd();
+
+//        DataBase::instance()->cleanupThreadDatabase();
       });
 
     for (const QString &path :SettingsManager::instance()->paths) {

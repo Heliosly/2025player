@@ -1,5 +1,7 @@
 #include "controlbar.h"
  #include"videoplayer.h"
+
+#include"musicplayer.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <DLabel>

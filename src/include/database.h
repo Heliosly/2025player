@@ -59,7 +59,8 @@ bool saveTagsFromJson(const QString &url, const QJsonArray &tagsArray);
     QList<MetaData>getDataFromLocallistwithHint(int hint, int offset);
 
 QJsonArray toApi(const QString &filePath);
-
+// 在每个线程真正结束前，调用下面这个清理函数
+void cleanupThreadDatabase();
 private:
 static QThreadStorage<QSqlDatabase> threadDatabase;
     // 返回当前线程的数据库连接，如果不存在则新建
