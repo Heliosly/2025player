@@ -1,4 +1,5 @@
 ﻿#include "videoplayer.h"
+#include"musicplayer.h"
 #include <QVBoxLayout>
 #include<QDebug>
 #include<QMouseEvent>
@@ -60,9 +61,9 @@ VideoPlayer::VideoPlayer()   {
 
     layout->addLayout(DownHLayout, 1);
 
-    connect(m_player, &QtAV::AVPlayer::positionChanged, this, &VideoPlayer::positionChanged);
-    connect(m_player, &QtAV::AVPlayer::durationChanged, this, &VideoPlayer::durationChanged);
-    connect(m_player, &QtAV::AVPlayer::stateChanged, this, &VideoPlayer::stateChanged);
+//    connect(m_player, &QtAV::AVPlayer::positionChanged, this, &VideoPlayer::positionChanged);
+//    connect(m_player, &QtAV::AVPlayer::durationChanged, this, &VideoPlayer::durationChanged);
+    connect(m_player, &QtAV::AVPlayer::stateChanged, this, &VideoPlayer::onStateChanged);
     //    connect(m_player, &QtAV::AVPlayer::error, this, [this](const QtAV::AVError &err) {
     //        emit errorOccurred(err.string());
     //    });
@@ -166,7 +167,7 @@ void VideoPlayer::mouseMoveEvent(QMouseEvent *event)
 void VideoPlayer::play(const QString &url) {
 
     m_urlList.push_back(url);
-    if(m_isPlaying)
+    if(m_player->state()==QtAV::AVPlayer::PlayingState)
     m_player->stop();
     else{
           filePath=url;
@@ -182,7 +183,7 @@ void VideoPlayer::play(const QString &url) {
 }
 
 bool VideoPlayer::isPlaying(){
-    return m_isPlaying;
+    return m_player->state()==QtAV::AVPlayer::PlayingState;
 }
 VideoPlayer::~VideoPlayer() {
     stop();
@@ -220,6 +221,7 @@ void VideoPlayer::stop() {
     manualStopped=1;
 
     m_timer1->stop();
+    m_urlList.clear();
     m_player->stop();
 }
 
@@ -257,12 +259,15 @@ QWidget* VideoPlayer::widget(){
     return m_videoOutput->widget();
 }
 void VideoPlayer::onMediaChange(QtAV::MediaStatus state){
+    if(!enable)
+        return ;
    emit mediaStatusChanged(state);
 
 }
 
 void VideoPlayer::onStarted(){
-    m_isPlaying=1;
+    if(!enable)
+        return ;
 
         auto duration = m_player->duration();
             QString title = QFileInfo(filePath).completeBaseName();
@@ -278,7 +283,8 @@ void VideoPlayer::onStarted(){
 }
 void VideoPlayer::onStopped(){
 
-    m_isPlaying=0;
+    if(!enable)
+        return;
     if(!m_urlList.empty()){
      auto url = m_urlList.front();
      m_urlList.pop_front();
@@ -293,5 +299,12 @@ void VideoPlayer::onStopped(){
     }
 
     emit videoStopped();
+
+}
+
+void VideoPlayer::onStateChanged(QtAV::AVPlayer::State state){
+     if(!enable)
+         return ;
+     emit stateChanged(state);
 
 }

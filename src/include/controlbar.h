@@ -1,7 +1,6 @@
 ///最下面控制栏，调音量的
 #ifndef CONTROLBAR_H
 #define CONTROLBAR_H
-#include"musicplayer.h"
 #include"musictable.h"
 #include<QtAV>
 #include<DIconButton>
@@ -61,7 +60,7 @@ private:
     bool m_isLight=false;
     int preVideoUrl=-1;
 public slots:
-    void musicStateChange(QMediaPlayer::State state);
+    void musicStateChange(QtAV::AVPlayer::State state);
     void videoStateChang(QtAV::AVPlayer::State state);
     void playslot();
     ///更改进度条
@@ -69,7 +68,7 @@ public slots:
     void preslot();
     void stopslot();
     void nexslot();
-    void musicMediaChange(QMediaPlayer::MediaStatus state);
+    void musicMediaChange(QtAV::MediaStatus state);
     void videoMediaChange(QtAV::MediaStatus state);
     void sliderchange(int value);
     void volumesetting(int value);

@@ -4,8 +4,6 @@
 #include "database.h"
 #include "metadata.h"
 #include"videoplayer.h"
-#include <QMediaPlayer>
-#include <QMediaPlaylist>
 #include <QWidget>
 #include <QVector>
 
@@ -50,8 +48,10 @@ public:
     MusicPlayer();
     ~MusicPlayer();
 
-    QMediaPlayer *player;
+    bool enable=0;
+    QtAV::AVPlayer*player;
     HistoryList history;
+    QString filePath;
 
     void initMusicByDir(const QString &mediaPath);
 
@@ -67,7 +67,7 @@ public:
     void pause();
 
     void stop();
-    QMediaPlayer::State state();
+    QtAV::AVPlayer::State state();
     void setVolume(int volume);
     void setPosition(qint64 position);
     qint64 duration();
@@ -78,9 +78,9 @@ public:
 //下方所有load函数都仅仅是和数据库交互，而不直接和musictable交互
     void readHistoryList();
 
+    void initConnect();
     // void readMusicList( const QString &playListName);
 private:
-    void initConnect();
 
     const QString locallist = "locallist";
     const QString historylist = "historylist";
@@ -99,10 +99,10 @@ signals:
 signals:
     void musicToMusictable(const MetaData & music);
 signals:
-    void mediaStatusChanged(QMediaPlayer::MediaStatus status);
+    void mediaStatusChanged( QtAV::MediaStatus status);
 
 signals:
-    void stateChanged(QMediaPlayer::State newState);
+    void stateChanged( QtAV::AVPlayer::State newState);
 
 
 signals:
@@ -115,8 +115,11 @@ signals:
     /// 负责向数据库卸载路径并发送信号给musictable使其更新页面;
     void uninstallPath(const QString &filePath);
 
-    void onMediaChange(QMediaPlayer::MediaStatus state);
+    void onMediaChange(QtAV::MediaStatus state);
+
 
     void onAppAboutToQuit();
+    void onStateChanged(QtAV::AVPlayer::State state);
+//    void onMediaStatusChanged(QtAV::MediaStatus status);
 };
 #endif // MUSICPLAYER_H

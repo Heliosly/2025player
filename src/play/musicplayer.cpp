@@ -18,24 +18,30 @@ MusicPlayer::MusicPlayer()
 {
 
 
-    player=new QMediaPlayer;
     readHistoryList();
-    connect(player, &QMediaPlayer::mediaStatusChanged, this,&MusicPlayer::onMediaChange);
 
-    initConnect();
+    connect(qApp, &QCoreApplication::aboutToQuit, this,&MusicPlayer::onAppAboutToQuit);
 
 }
 MusicPlayer::~MusicPlayer(){
 //TODO
-     disconnect();
 }
 void MusicPlayer::play(const QString& url){
     if(QFile::exists(url)){
-        player->stop();
-        player->setMedia(QUrl::fromLocalFile(url));
-        player->play();
-        mediaSetted(url);
+        if(state()==QtAV::AVPlayer::PlayingState)
+        {
+         player->stop();
+        filePath=url;
+        player->play(url);
+    }
+        else{
+filePath=url;
+     player->play(url);
 
+
+    }
+
+        emit mediaSetted(url);
     }
     else{
         DataBase::instance()->deleteByUrl(QStringList{url},locallist);
@@ -428,7 +434,7 @@ void MusicPlayer::uninstallPath(const QString &filePath) {
                 emit mediaListSub(filePath);
         }
 
-//        DataBase::instance()->cleanupThreadDatabase();
+        DataBase::instance()->cleanupThreadDatabase();
     });
 }
 
@@ -438,7 +444,7 @@ void MusicPlayer::installPath(const QString & filePath){
         addPathToDB(filePath);
         DataBase::instance()->reSetListCount();
 
-//        DataBase::instance()->cleanupThreadDatabase();
+        DataBase::instance()->cleanupThreadDatabase();
             emit mediaListAdd();
     });
 }
@@ -453,11 +459,11 @@ void MusicPlayer::play(){
 void MusicPlayer::stop(){
     player->stop();
 }
-QMediaPlayer::State MusicPlayer::state(){
+QtAV::AVPlayer::State MusicPlayer::state(){
     return player->state();
 }
 void MusicPlayer::setVolume(int volume){
-    player->setVolume(volume);
+    VideoPlayer::instance()->setVolume(volume);
 }
 void MusicPlayer::setPosition(qint64 position){
     player->setPosition(position);
@@ -466,21 +472,25 @@ qint64 MusicPlayer::duration(){
     player->duration();
 }
 void MusicPlayer::setSpeed(qreal speed){
-    player->setPlaybackRate(speed);
+     VideoPlayer::instance()->setSpeed(speed);
 
 }
-void MusicPlayer::onMediaChange(QMediaPlayer::MediaStatus state){
-    if (state==QMediaPlayer::MediaStatus::BufferedMedia)
+void MusicPlayer::onMediaChange(QtAV::MediaStatus state){
+    if(!enable){
+        return ;
+    }
+    if (state==QtAV::MediaStatus::BufferedMedia)
     {
-        QMediaContent media = player->media();
-        history.addToHistory(
-                    HistoryMData(player->media().canonicalUrl().toLocalFile(),
-                                 player->metaData(QStringLiteral("Title")).toString(), player->duration()/1000))
-                ;
+        auto duration = player->duration();
+            QString title = QFileInfo(filePath).completeBaseName();
+         history.addToHistory(
+                    HistoryMData(filePath,
+                                 title, duration/1000));
         emit historyListChange(history.history.first());
     }
 
 
+    emit mediaStatusChanged(state);
 }
 
 void MusicPlayer::readHistoryList() {
@@ -507,15 +517,26 @@ void MusicPlayer::onAppAboutToQuit(){
 }
 
 void MusicPlayer::initConnect(){
-    connect(player,&QMediaPlayer::stateChanged,this,&MusicPlayer::stateChanged);
-    connect(player,&QMediaPlayer::mediaStatusChanged,this,&MusicPlayer::onMediaChange);
+    connect(player, &QtAV::AVPlayer::stateChanged, this, &MusicPlayer::onStateChanged);
+    connect(player,&QtAV::AVPlayer::mediaStatusChanged,this,&MusicPlayer::onMediaChange);
 
-    connect(player,&QMediaPlayer::mediaStatusChanged,this,&MusicPlayer::mediaStatusChanged);
 
-    connect(qApp, &QCoreApplication::aboutToQuit, this,&MusicPlayer::onAppAboutToQuit);
 }
 
 void HistoryList::sendHistoryRemove(){
     ///bug
  emit historyListRemove(0);
 }
+void MusicPlayer::onStateChanged(QtAV::AVPlayer::State state) {
+    if (!enable)
+        return;
+
+    emit stateChanged(state);  // 如果你之前就是发这个信号
+}
+
+//void MusicPlayer::onMediaStatusChanged(QtAV::MediaStatus status) {
+//    if (!enable)
+//        return;
+
+//    emit mediaStatusChanged(status);
+//}

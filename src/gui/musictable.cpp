@@ -10,7 +10,6 @@
 #include <DTableWidget>
 #include <QHeaderView>
 #include <QScrollBar>
-#include <QMediaMetaData>
 #include <QDebug>
 #include <DStandardItem>
 #include <QPainter>

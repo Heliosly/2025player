@@ -1,13 +1,13 @@
 #ifndef VIDEOPLAYER_H
 #define VIDEOPLAYER_H
 
+
 #include"controlbar.h"
 #include <QWidget>
 #include<QTimer>
 #include<DTitlebar>
 
 #include<DMainWindow>
-#include<QMediaPlayer>
 #include <QtAV>
 #include <DMessageBox>
 #include<QList>
@@ -20,6 +20,7 @@ public:
     ~VideoPlayer();
 
 
+    bool enable=0;
     QtAV::AVPlayer *m_player;      // QtAV 播放器核心
     bool manualStopped=0;
     ControlBar * m_controlBar;
@@ -45,8 +46,8 @@ public:
     void closeVideoPage();
 
 signals:
-    void positionChanged(qint64 position); // 播放位置变化
-    void durationChanged(qint64 duration); // 总时长变化
+//    void positionChanged(qint64 position); // 播放位置变化
+//    void durationChanged(qint64 duration); // 总时长变化
     void stateChanged(QtAV::AVPlayer::State state); // 播放状态变化
     void errorOccurred(const QString &error);       // 错误信息
     void mediaStatusChanged(QtAV::MediaStatus status);
@@ -65,7 +66,6 @@ signals:
 private:
 
     QList<QString> m_urlList;
-    bool m_isPlaying =0;
     QtAV::VideoOutput *m_videoOutput; // 视频渲染器
     QTimer *m_timer;
     //用于为鼠标移动事件计时
@@ -94,6 +94,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
 
 public slots:
+    void onStateChanged(QtAV::AVPlayer::State state);
     void onStarted();
     void onShiftScreen();
     void onStopped();

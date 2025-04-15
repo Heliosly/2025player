@@ -41,7 +41,7 @@ UserPreference::UserPreference() {
        // 初始化用户向量为50维全0向量
     if(!DataBase::instance()->checkUrlExistsInTags("_user")){
 
-    m_vector.fill(0.0, 50);
+    m_vector.fill(0.02, 50);
     }
     else{
         m_vector= musicTagsToVector(DataBase::instance()->parseTagsToOrderedList(DataBase::instance()->getTagsArrayByUrl("_user")));

@@ -1,4 +1,5 @@
 #include "database.h"
+#include<QStandardPaths>
 #include "metadata.h"
 #include <QFileInfo>
 #include <QBuffer>
@@ -18,16 +19,18 @@
 #include <QDir>
 #include <QMap>
 #include <QThread>
+#include <QMutex>
 
 // 定义静态成员
 DataBase* DataBase::s_instance = nullptr;
 QThreadStorage<QSqlDatabase> DataBase::threadDatabase;
+QMutex DataBase::dbMutex(QMutex::Recursive); // 添加 QMutex 静态成员
 
 DataBase* DataBase::instance()
 {
-    if (s_instance == nullptr) {
-        s_instance = new DataBase();  // 创建唯一的实例
-    }
+        if (s_instance == nullptr) {
+            s_instance = new DataBase();  // 创建唯一的实例
+        }
     return s_instance;
 }
 
@@ -48,6 +51,8 @@ DataBase::DataBase()
     // countLocallist = getListCount("locallist");
     // countHistorylist = getListCount("historylist");
 }
+DataBase::~DataBase(){
+}
 
 // 如果需要重新统计，可以调用该接口
 bool DataBase::reSetListCount(){
@@ -58,8 +63,9 @@ bool DataBase::reSetListCount(){
 
 bool DataBase::createConnection(const QString dataBase_Name)
 {
+    QMutexLocker locker(&dbMutex); // 加锁
     // 使用用户主目录路径替代 '~'
-    QString buildPath = QDir::homePath() + "/.local/share/2025player/";
+    QString buildPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(buildPath); // 确保目录存在
 
     // 仅在主线程中使用一个固定的连接名
@@ -68,7 +74,7 @@ bool DataBase::createConnection(const QString dataBase_Name)
 
     // 打开数据库连接
     if (!db.open()) {
-        qDebug() << "Error: Failed to connect database." << db.lastError();
+        qDebug() << "Error: Failed to connect database."<<buildPath << db.lastError();
         return false;
     }
 
@@ -91,6 +97,8 @@ bool DataBase::createConnection(const QString dataBase_Name)
 
 
 int DataBase::getListCount(const QString &playListName) {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement = QString("SELECT COUNT(*) FROM %1;").arg(playListName);
@@ -108,6 +116,8 @@ int DataBase::getListCount(const QString &playListName) {
 
 bool DataBase::createFilePathTable()
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement = "CREATE TABLE IF NOT EXISTS filepath_table ("
@@ -123,6 +133,8 @@ bool DataBase::createFilePathTable()
 
 bool DataBase::createPlayListNotExist()
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement;
@@ -152,6 +164,8 @@ bool DataBase::createPlayListNotExist()
 
 bool DataBase::createHistoryListNotExist()
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement;
@@ -177,6 +191,8 @@ bool DataBase::createHistoryListNotExist()
 
 bool DataBase::saveMetaData(const QMap<QString, QString> &metaDataMap, const QPixmap &img, bool status)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString dirPath, filePath, title, artist, album, duration;
@@ -239,6 +255,8 @@ bool DataBase::saveMetaData(const QMap<QString, QString> &metaDataMap, const QPi
 
 bool DataBase::saveTagsFromJson(const QString &url, const QJsonArray &tagsArray)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QJsonDocument doc(tagsArray);
@@ -256,6 +274,8 @@ bool DataBase::saveTagsFromJson(const QString &url, const QJsonArray &tagsArray)
 
 QJsonArray DataBase::getTagsArrayByUrl(const QString &filePath)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     sql_query.prepare("SELECT tags FROM tags_table WHERE filePath = :filePath;");
@@ -278,7 +298,6 @@ QJsonArray DataBase::toApi(const QString &filePath)
         return getTagsArrayByUrl(filePath);
     }
     qDebug()<<"send request for "<<filePath;
-    QNetworkAccessManager manager;
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Unable to open file";
@@ -301,10 +320,11 @@ QJsonArray DataBase::toApi(const QString &filePath)
 
     QUrl url("http://8.140.242.219:6001/api");
     QNetworkRequest request(url);
-    QNetworkReply *reply = manager.post(request, multiPart);
-    QEventLoop loop;
-    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    loop.exec();
+    loop = new QEventLoop();
+    reply = manager.post(request, multiPart);
+    QObject::connect(reply, &QNetworkReply::finished, loop, &QEventLoop::quit);
+
+      loop->exec();
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
@@ -321,7 +341,9 @@ QJsonArray DataBase::toApi(const QString &filePath)
         qWarning() << "Ai api Request failed:" << reply->errorString();
     }
     reply->deleteLater();
-    multiPart->deleteLater();
+        delete loop;
+        reply = nullptr;
+        loop = nullptr;
 
          qDebug()<<filePath<<"succeeful2 to Api";
     return QJsonArray();
@@ -349,6 +371,8 @@ QList<QPair<QString, qreal>> DataBase::parseTagsToOrderedList(const QJsonArray &
 
 bool DataBase::checkUrlExistsInTags(const QString &url)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     sql_query.prepare("SELECT COUNT(filePath) FROM tags_table WHERE filePath = :url;");
@@ -383,6 +407,8 @@ bool DataBase::rewriteTagsWithList(const QString &url, const QList<QPair<QString
         tagsArray.append(tagObj);
     }
 
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery query(localDb);
     const QString sql = "INSERT OR REPLACE INTO tags_table (filePath, tags) VALUES (:url, :tags)";
@@ -407,10 +433,10 @@ QSqlDatabase DataBase::getThreadDatabase()
     // 生成唯一连接名
     QString connectionName = QString("conToMetaData_%1").arg((quintptr)QThread::currentThread());
     QSqlDatabase newDb = QSqlDatabase::addDatabase("QSQLITE", connectionName);
-    QString buildPath = QCoreApplication::applicationDirPath() + "/build";
+    QString buildPath =  QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     newDb.setDatabaseName(buildPath + "/metaData.db");
     if (!newDb.open()) {
-        qDebug() << "Error: Failed to open database for thread" << connectionName << newDb.lastError();
+        qDebug() << "Error: Failed to open database for thread"<<"in"<<buildPath << connectionName << newDb.lastError();
     }
     threadDatabase.setLocalData(newDb);
     return threadDatabase.localData();
@@ -420,6 +446,8 @@ QSqlDatabase DataBase::getThreadDatabase()
 bool DataBase::saveHistoryData(
                                const QList<HistoryMData> &history)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase db = getThreadDatabase();
     QSqlQuery query(db);
 
@@ -470,6 +498,8 @@ bool DataBase::saveHistoryData(
     return true;
 }
 void DataBase::clearTable(const QString &playListName) {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement = QString("DELETE FROM %1").arg(playListName);
@@ -480,6 +510,8 @@ void DataBase::clearTable(const QString &playListName) {
 }
  QStringList DataBase::getUrlFromPlayList(const QString &playListName)
  {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
      QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
      QString sqlStatement;
@@ -504,6 +536,8 @@ void DataBase::clearTable(const QString &playListName) {
 
 
 bool DataBase::deleteByUrl(const QStringList &url, const QString &playListName) {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement;
@@ -521,6 +555,8 @@ bool DataBase::deleteByUrl(const QStringList &url, const QString &playListName) 
 }
 
 bool DataBase::queryByUrl(const QString &url, const QString &playListName, QMap<QString,QString> &map) {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement = QString("SELECT * FROM %1 WHERE filePath = :url;").arg(playListName);
@@ -555,6 +591,7 @@ bool DataBase::queryByUrl(const QString &url, const QString &playListName, QMap<
 bool DataBase::addFilePath(const QString &dirPath)
 {
     QSqlDatabase localDb = getThreadDatabase();
+
     QSqlQuery sql_query(localDb);
     sql_query.prepare("INSERT OR IGNORE INTO filepath_table (dirPath) VALUES (:dirPath);");
     sql_query.bindValue(":dirPath", dirPath);
@@ -567,6 +604,8 @@ bool DataBase::addFilePath(const QString &dirPath)
 
 bool DataBase::deleteByDirPath(const QString &dirPath, const QString &playListName)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
 
@@ -594,7 +633,9 @@ bool DataBase::deleteByDirPath(const QString &dirPath, const QString &playListNa
 /// 从第hint条记录开始获取到向下offset条记录
 
 QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
-    QList<MetaData> resultList;
+        QList<MetaData> resultList;
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
 
@@ -642,6 +683,8 @@ QList<MetaData> DataBase::getDataFromLocallistwithHint(int hint, int offset) {
     return resultList;
 }
 bool DataBase::createTagsTableNotExist() {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
     QSqlDatabase localDb = getThreadDatabase();
     QSqlQuery sql_query(localDb);
     QString sqlStatement = "CREATE TABLE IF NOT EXISTS tags_table ("
@@ -656,8 +699,10 @@ bool DataBase::createTagsTableNotExist() {
 
 MetaData DataBase::getMetaDataByUrl(const QString &url)
 {
+    QMutexLocker locker(&dbMutex); // 添加锁
+
+    QSqlDatabase localDb = getThreadDatabase();
     MetaData metaData;
-    QSqlDatabase localDb = getThreadDatabase();  // 获取数据库连接
     QSqlQuery sql_query(localDb);
 
     // SQL 查询语句，根据 URL 查找对应的元数据
@@ -701,6 +746,8 @@ MetaData DataBase::getMetaDataByUrl(const QString &url)
 void DataBase::cleanupThreadDatabase() {
     if (threadDatabase.hasLocalData()) {
         QSqlDatabase db = threadDatabase.localData();
+
+    QMutexLocker locker(&dbMutex); // 添加锁
         QString connName = db.connectionName();
 
         if (db.isOpen()) {
@@ -713,4 +760,14 @@ void DataBase::cleanupThreadDatabase() {
 
         QSqlDatabase::removeDatabase(connName);  // 移除数据库连接
     }
+}
+
+void DataBase::abortRequest(){
+        if (reply &&reply->isRunning()) {
+           reply->abort();
+       }
+       if (loop && loop->isRunning()) {
+           loop->quit();
+       }
+
 }

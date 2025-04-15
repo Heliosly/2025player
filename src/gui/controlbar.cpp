@@ -144,7 +144,7 @@ ControlBar::ControlBar(QWidget *parent,bool _isVideo) : DFrame(parent)
 void ControlBar::connectVideoFc(){
      connect(VideoPlayer::instance(), &VideoPlayer::stateChanged, this, &ControlBar::videoStateChang);
     connect(VideoPlayer::instance(), &VideoPlayer::mediaStatusChanged, this, &ControlBar::videoMediaChange);
-    //    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QMediaPlayer::setVolume);
+    //    connect(volumeSlider, &DSlider::valueChanged, mediaPlayer, &QtAV::setVolume);
 
     connect(btscreen, &DIconButton::clicked,VideoPlayer::instance() ,&VideoPlayer::onShiftScreen);
     volumeSlider->setValue(100);
@@ -274,9 +274,9 @@ void ControlBar::videoStateChang(QtAV::AVPlayer::State state){
     }
 }
 
-void ControlBar::musicStateChange(QMediaPlayer::State state)
+void ControlBar::musicStateChange(QtAV::AVPlayer::State state)
 {
-    if (state == QMediaPlayer::StoppedState)
+    if (state == QtAV::AVPlayer::StoppedState)
     {
         inplay=false;
 
@@ -292,7 +292,7 @@ void ControlBar::musicStateChange(QMediaPlayer::State state)
         cTimer->stop();
         processSlider->setValue(0);
     }
-    else if (state == QMediaPlayer::PlayingState)
+    else if (state == QtAV::AVPlayer::PlayingState)
     {
         inplay=true;
 
@@ -325,7 +325,7 @@ void ControlBar::playslot()
             auto &player = MusicPlayer::instance();
 
              auto state = player.state();
-    if (state ==QMediaPlayer::State::PlayingState)
+    if (state ==QtAV::AVPlayer::PlayingState)
     {
         player.pause();
     }
@@ -361,13 +361,13 @@ void ControlBar::playslot()
         }
            }
     auto &player = MusicPlayer::instance();
-    if(player.player->mediaStatus()==QMediaPlayer::MediaStatus::NoMedia){
+    if(player.player->mediaStatus()==QtAV::MediaStatus::NoMedia){
         temp->playVideoFromIndex(0);
     }
     else{
 
          auto state = player.state();
-    if (state ==QMediaPlayer::State::PlayingState)
+    if (state ==QtAV::AVPlayer::PlayingState)
     {
         player.pause();
     }
@@ -596,10 +596,10 @@ void ControlBar::videoMediaChange(QtAV::MediaStatus state){
     }
 
 }
-void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
+void ControlBar::musicMediaChange(QtAV::MediaStatus state)
 {
     /// 换媒体文件
-    if (state == QMediaPlayer::MediaStatus::LoadedMedia||state==QMediaPlayer::MediaStatus::BufferedMedia)
+    if (state==QtAV::MediaStatus::BufferedMedia)
     {
 
         qDebug()<<"BUfferedMedia MS";
@@ -607,7 +607,7 @@ void ControlBar::musicMediaChange(QMediaPlayer::MediaStatus state)
         endtime->setText(QString(formatTime(MusicPlayer::instance().duration() / 1000 + 1)));
         processSlider->setMaximum(MusicPlayer::instance().duration() / 1000 + 1);
     }
-    else if (state == QMediaPlayer::MediaStatus::EndOfMedia)
+    else if (state == QtAV::MediaStatus::EndOfMedia)
     {
         cTimer->stop();
         if (loopstate == Loop)

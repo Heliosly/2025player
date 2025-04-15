@@ -3,6 +3,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include<QHotkey>
+#include<QStandardPaths>
 
 SettingsManager* SettingsManager::s_instance = nullptr;
 
@@ -15,11 +16,12 @@ SettingsManager* SettingsManager::instance() {
 
 SettingsManager::SettingsManager(const QString &filePath)
 {
-    QFileInfo fileInfo(filePath);
-    QDir dir = fileInfo.absoluteDir();
-    if (!dir.exists()) {
-        dir.mkpath(".");
-    }
+     QString configFilePath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + filePath;
+     QFileInfo fileInfo(configFilePath);
+        QDir dir = fileInfo.absoluteDir();
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
 
     settings.reset(new QSettings(filePath, QSettings::IniFormat));
 

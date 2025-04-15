@@ -7,6 +7,7 @@
 #include"controlbar.h"
 #include"uservector.h"
 #include"shortcutmanager.h"
+#include"musicplayer.h"
 #include"videoplayer.h"
 #include<QVBoxLayout>
 #include<QScreen>
@@ -22,7 +23,6 @@
 #include <DMainWindow>
 #include <DGuiApplicationHelper>
 #include<QVBoxLayout>
-#include<QMediaPlayer>
 #include <QResizeEvent>
 
 
@@ -51,7 +51,6 @@ private:
     //有奖
     QHBoxLayout* RightHLayout = new QHBoxLayout;   
     QHBoxLayout* LeftHLayout = new QHBoxLayout;
-    QMediaPlayer *player = new QMediaPlayer(this);
     QStackedWidget * page;
      RecommandPage * recommandPage ;
     MusicTable *music_table;
@@ -73,9 +72,13 @@ public slots:
     // void setupConnections() ;
 
     void onShiftScreen();
+
+    void onQuit();
 public emit:
     void showSettingPage();
 private:
+
+void closeEvent(QCloseEvent *event) ;
   protected:
 
 };

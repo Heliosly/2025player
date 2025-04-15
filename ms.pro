@@ -1,5 +1,4 @@
 QT += core gui dtkwidget
-QT += multimedia
 QT += sql
 QT += charts
 CONFIG += c++17 rtti

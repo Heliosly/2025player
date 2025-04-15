@@ -10,7 +10,11 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include<QJsonArray>
+#include<QEventLoop>
 #include <QSqlError>
+#include<QMutex>
+#include<QNetworkReply>
+
 #include <QThreadStorage>
 class DataBase : public QObject
 {
@@ -20,7 +24,10 @@ public:
         static DataBase* instance();
 
 
+
+    void abortRequest();
         DataBase(const DataBase&) = delete;
+        ~DataBase();
         void operator=(const DataBase&) = delete;
 
     QSqlDatabase db;
@@ -62,11 +69,17 @@ QJsonArray toApi(const QString &filePath);
 // 在每个线程真正结束前，调用下面这个清理函数
 void cleanupThreadDatabase();
 private:
+   QNetworkReply *reply;
+  QEventLoop * loop;
+
+    QNetworkAccessManager manager;
+   static QMutex dbMutex;
 static QThreadStorage<QSqlDatabase> threadDatabase;
     // 返回当前线程的数据库连接，如果不存在则新建
     QSqlDatabase getThreadDatabase();
     DataBase();
     static DataBase *s_instance;
+signals:
 };
 
 #endif // DATABASE_H

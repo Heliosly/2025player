@@ -246,7 +246,7 @@ void RecommandPage::deleteByDir(const QString &dir){
               UserPreference::instance()->temp->changeStackLayout(1);
           }
       }
-
+refreshList();
 }
 
 

@@ -2,7 +2,6 @@
 #include<DApplicationHelper>
 MainWindow::~MainWindow() {
 
-
 }
 MainWindow::MainWindow()
 
@@ -17,6 +16,10 @@ MainWindow::MainWindow()
     //标题栏
 
     VideoPlayer::instance()->m_controlBar->connectVideoFc();
+    MusicPlayer::instance().enable=1;
+
+    MusicPlayer::instance().player= VideoPlayer::instance()->player();
+    MusicPlayer::instance().initConnect();
 
     DTitlebar * bar=this->titlebar();
     ;
@@ -172,6 +175,8 @@ MainWindow::MainWindow()
 void MainWindow::closeVideoPage(){
 
     isVideoPage=0;
+ VideoPlayer::instance()->enable=0;
+    MusicPlayer::instance().enable=1;
 
     auto widget = VideoPlayer::instance()->widget();
     widget->hide();
@@ -182,6 +187,8 @@ void MainWindow::closeVideoPage(){
 
 void MainWindow::showVideoPage(){
     isVideoPage=1;
+    VideoPlayer::instance()->enable=1;
+    MusicPlayer::instance().enable=0;
     auto widget = VideoPlayer::instance()->widget();
     // 复制 MainWindow 的几何信息（含位置+大小）
     widget->setGeometry(this->geometry());
@@ -322,8 +329,9 @@ void MainWindow::LoadStyleSheet( QString url)
 }
 
 void MainWindow::onAppAboutToQuit() {
-    UserPreference::instance()->reWrite();
 
+    UserPreference::instance()->reWrite();
+    onQuit();
 
 }
 
@@ -349,4 +357,16 @@ void MainWindow::onShiftScreen()
 
 }
 
+void MainWindow::closeEvent(QCloseEvent *event) {
+    // 可以在这里处理一些清理工作
+    // 如果需要询问用户是否退出，或者保存数据等
 
+    event->accept();  // 确保事件被接受，窗口关闭
+}
+
+void MainWindow::onQuit(){
+   DataBase::instance()->abortRequest();
+   music_table->m_abort=1;
+
+      QCoreApplication::quit();  // 让应用退出
+}
