@@ -72,7 +72,6 @@ private:
    QNetworkReply *reply;
   QEventLoop * loop;
 
-    QNetworkAccessManager manager;
    static QMutex dbMutex;
 static QThreadStorage<QSqlDatabase> threadDatabase;
     // 返回当前线程的数据库连接，如果不存在则新建

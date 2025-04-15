@@ -137,6 +137,7 @@ ControlBar::ControlBar(QWidget *parent,bool _isVideo) : DFrame(parent)
            connect(&MusicPlayer::instance(), &MusicPlayer::stateChanged, this, &ControlBar::musicStateChange);
     connect(&MusicPlayer::instance(), &MusicPlayer::mediaStatusChanged, this, &ControlBar::musicMediaChange);
 
+    connect(&MusicPlayer::instance(), &MusicPlayer::started, this, &ControlBar::onStarted);
     }
 
 
@@ -602,11 +603,7 @@ void ControlBar::musicMediaChange(QtAV::MediaStatus state)
     if (state==QtAV::MediaStatus::BufferedMedia)
     {
 
-        qDebug()<<"BUfferedMedia MS";
-        PlaySliderValueReset();
-        endtime->setText(QString(formatTime(MusicPlayer::instance().duration() / 1000 + 1)));
-        processSlider->setMaximum(MusicPlayer::instance().duration() / 1000 + 1);
-    }
+          }
     else if (state == QtAV::MediaStatus::EndOfMedia)
     {
         cTimer->stop();
@@ -841,12 +838,22 @@ void ControlBar:: shiftThemeIcon(bool isLight){
 }
 void ControlBar::onStarted(){
 
-        qDebug()<<"started AV";
+       if(isVideo)
+        {
+           qDebug()<<"started AV";
 
         qint64 duration = VideoPlayer::instance()->duration();  // 使用 VideoPlayer 实例
 
         if(duration==0) return ;
           endtime->setText(QString(formatTime(duration / 1000 + 1)));
         processSlider->setMaximum(duration / 1000 + 1);
+       }
+       else{
+           qDebug()<<"stated AU";
+             PlaySliderValueReset();
+        endtime->setText(QString(formatTime(MusicPlayer::instance().duration() / 1000 + 1)));
+        processSlider->setMaximum(MusicPlayer::instance().duration() / 1000 + 1);
+
+       }
 
 }

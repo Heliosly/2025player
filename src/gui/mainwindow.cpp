@@ -15,6 +15,7 @@ MainWindow::MainWindow()
 
     //标题栏
 
+    DataBase::instance();
     VideoPlayer::instance()->m_controlBar->connectVideoFc();
     MusicPlayer::instance().enable=1;
 
@@ -368,5 +369,4 @@ void MainWindow::onQuit(){
    DataBase::instance()->abortRequest();
    music_table->m_abort=1;
 
-      QCoreApplication::quit();  // 让应用退出
 }

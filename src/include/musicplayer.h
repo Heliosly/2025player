@@ -93,6 +93,7 @@ private:
 
 signals:
     void mediaSetted(const QString &dir);
+    void started();
     ///用于addpath的信号
     void mediaListAdd();
     void mediaListSub(const QString &dir);
@@ -120,6 +121,10 @@ signals:
 
     void onAppAboutToQuit();
     void onStateChanged(QtAV::AVPlayer::State state);
+     void onStopped();
+
+    void onStarted();
+
 //    void onMediaStatusChanged(QtAV::MediaStatus status);
 };
 #endif // MUSICPLAYER_H

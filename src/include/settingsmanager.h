@@ -20,6 +20,8 @@ public:
     void addNewPath(const QString &path);
     void deletePath(const QString &path);
     QStringList paths;
+
+    bool isAdding=0;
 private:
       void saveSettings(const QString &tag, const QStringList &paths);
     void loadSettings(const QString &tag, QStringList &paths);

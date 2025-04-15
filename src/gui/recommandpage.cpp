@@ -163,7 +163,7 @@ void RecommandPage::refreshList() {
         item->setData(data.url, Qt::UserRole + 1);
         model->appendRow(item);
     }
-    qDebug() << "trace1";
+//    qDebug() << "trace1";
 
     // 7. 最后再短暂加锁检查原队列是否已空
     bool isEmpty;
@@ -238,7 +238,6 @@ void RecommandPage::deleteByDir(const QString &dir){
       }
 
       this->refreshList();
-      qDebug() << "[RecommandPage] Deleted similarity items in dir:" << dir;
 
       {
           QMutexLocker locker(&mutex);

@@ -71,6 +71,7 @@ bool DataBase::createConnection(const QString dataBase_Name)
     // 仅在主线程中使用一个固定的连接名
     db = QSqlDatabase::addDatabase("QSQLITE", "conToMetaData");
     db.setDatabaseName(buildPath + "/" + dataBase_Name + ".db");
+    qDebug()<<"DataBaseName="<<buildPath + "/" + dataBase_Name + ".db";
 
     // 打开数据库连接
     if (!db.open()) {
@@ -290,12 +291,16 @@ QJsonArray DataBase::getTagsArrayByUrl(const QString &filePath)
 QJsonArray DataBase::toApi(const QString &filePath)
 {
 
-    qDebug()<<"trace5.5";
+    if(filePath.isEmpty())
+        return QJsonArray() ;
+    {
     if (checkUrlExistsInTags(filePath)) {
+
 
     qDebug()<<"read success "<<filePath;
 
         return getTagsArrayByUrl(filePath);
+    }
     }
     qDebug()<<"send request for "<<filePath;
     QFile file(filePath);
@@ -318,6 +323,7 @@ QJsonArray DataBase::toApi(const QString &filePath)
     QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
     multiPart->append(audioPart);
 
+    QNetworkAccessManager manager;
     QUrl url("http://8.140.242.219:6001/api");
     QNetworkRequest request(url);
     loop = new QEventLoop();
@@ -332,7 +338,7 @@ QJsonArray DataBase::toApi(const QString &filePath)
         QJsonObject responseObject = responseDoc.object();
         if (responseObject.contains("tags") && responseObject["tags"].isArray()) {
             QJsonArray tagsArray = responseObject["tags"].toArray();
-            saveTagsFromJson(filePath, tagsArray);
+
 
          qDebug()<<filePath<<"succeeful to Api";
             return tagsArray;
@@ -590,6 +596,9 @@ bool DataBase::queryByUrl(const QString &url, const QString &playListName, QMap<
 
 bool DataBase::addFilePath(const QString &dirPath)
 {
+    if(dirPath == "" ){
+        qDebug()<<"a empty dirPath 1";
+    }
     QSqlDatabase localDb = getThreadDatabase();
 
     QSqlQuery sql_query(localDb);

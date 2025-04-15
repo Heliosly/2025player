@@ -93,7 +93,7 @@ void MusicTable::deleteByDir(const QString &dir){
     for(auto i:dirIndex){
         emit mediaDeletedByDir(musicUrlListAll[i]);
 
-        qDebug()<<"i:"<<i;
+//        qDebug()<<"i:"<<i;
         if(musicUrlList.contains(musicUrlListAll[i])){
           musicUrlList.removeAt(i);
         }
@@ -123,6 +123,7 @@ void MusicTable::deleteByDir(const QString &dir){
     }
 
     dirToIndex.remove(dir);
+    m_currentHint=musicListModel->columnCount();
 
 
 }
@@ -292,7 +293,7 @@ void MusicTable::onHistoryListRemove(int index){
 }
 // 添加新的历史记录项目
 void MusicTable::addHistoryItem(const HistoryMData& item) {
-    
+
     DStandardItem *newItem = new DStandardItem(item.icon ,item.title);
 
     newItem->setData(item.isVideo,Qt::UserRole+1);
@@ -389,7 +390,7 @@ void MusicTable::initLayout()
     // 从左到右 存储table上方控件的布局
     QHBoxLayout *button_HBoxLayout = new QHBoxLayout();
     searchEdit = new DLineEdit(this);
-    searchEdit->setPlaceholderText("搜索本地音乐");
+    searchEdit->setPlaceholderText("搜索本地媒体");
     searchEdit->setMaximumSize(200, 25);
     QAction *searchAction = new QAction(searchEdit);
     // 设置ICON在搜索框右边
@@ -666,6 +667,7 @@ void MusicTable::onResetWindowSize(int width)
 
 void MusicTable::onSearchTextChange(QString text)
 {
+    {
     auto model = musicListModel;
     if (!model) return;
 
@@ -676,8 +678,19 @@ void MusicTable::onSearchTextChange(QString text)
         music_table->setRowHidden(i, !matchFound);
     }
 }
+     auto model = videoListModel;
+    if (!model) return;
+
+    for (int i = 0; i < model->rowCount(); ++i) {
+        QString itemText = model->index(i, 0).data(Qt::DisplayRole).toString();
+
+        bool matchFound = itemText.contains(text, Qt::CaseInsensitive);
+        video_table->setRowHidden(i, !matchFound);
+    }
+
+}
 void MusicTable::resetMusicTable()
-{        
+{
     m_loaded=0;
     setMusicCount(DataBase::instance()->getListCount("locallist"));
     emit toResizeWidget();
@@ -906,6 +919,10 @@ void MusicTable::toApi() {
 
     // 使用QFuture保存任务句柄
     m_future = QtConcurrent::run([this]() {
+         if (!enableFavorite)
+         {
+             return;
+         }
         bool temp=0;
         QStringList tempList;
         {
@@ -919,6 +936,11 @@ void MusicTable::toApi() {
 
 
         for (auto i = tempList.begin();i<tempList.end();i++) {
+             if (!enableFavorite)
+         {
+             return;
+         }
+
             const auto &url =*i;
             // 检查终止标志
             {
@@ -960,13 +982,14 @@ void MusicTable::toApi() {
             }
 
             if (a.isEmpty()) {
+
+                    enableFavorite = false;
                 QMetaObject::invokeMethod(this, [this]() {
                     DMessageManager::instance()->sendMessage(
                         this,
                         style()->standardIcon(QStyle::SP_MessageBoxWarning),
                         "识曲api请求失败，已关闭喜好模式"
                     );
-                    enableFavorite = false;
                 }, Qt::QueuedConnection);
                 continue;
             }

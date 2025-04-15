@@ -95,9 +95,10 @@ protected:
 
 public slots:
     void onStateChanged(QtAV::AVPlayer::State state);
-    void onStarted();
     void onShiftScreen();
     void onStopped();
+
+    void onStarted();
 };
 
 #endif // VIDEOPLAYER_H

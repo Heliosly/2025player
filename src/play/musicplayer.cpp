@@ -1,5 +1,6 @@
 ﻿#include"musicplayer.h"
 #include"metadata.h"
+#include"settingsmanager.h"
 #include <fileref.h>
 #include <tag.h>
 #include <id3v2tag.h>
@@ -133,6 +134,8 @@ void MusicPlayer::addPathToDB(const QString &dir){
 
 
     }
+    SettingsManager::instance()->isAdding=0;
+
 }
 
 // ///从数据库读元信息
@@ -303,7 +306,6 @@ void MusicPlayer::insertItemToMusicTableFromNewDir(const QString &url, const QSt
     meta.album = metaDataMap.value("album");
     meta.duration = metaDataMap.value("duration").toInt();
     meta.covpix = covpix;
-    emit musicToMusictable(meta);
 
 
 }
@@ -434,7 +436,7 @@ void MusicPlayer::uninstallPath(const QString &filePath) {
                 emit mediaListSub(filePath);
         }
 
-        DataBase::instance()->cleanupThreadDatabase();
+//        DataBase::instance()->cleanupThreadDatabase();
     });
 }
 
@@ -444,7 +446,7 @@ void MusicPlayer::installPath(const QString & filePath){
         addPathToDB(filePath);
         DataBase::instance()->reSetListCount();
 
-        DataBase::instance()->cleanupThreadDatabase();
+//        DataBase::instance()->cleanupThreadDatabase();
             emit mediaListAdd();
     });
 }
@@ -519,7 +521,9 @@ void MusicPlayer::onAppAboutToQuit(){
 void MusicPlayer::initConnect(){
     connect(player, &QtAV::AVPlayer::stateChanged, this, &MusicPlayer::onStateChanged);
     connect(player,&QtAV::AVPlayer::mediaStatusChanged,this,&MusicPlayer::onMediaChange);
+    connect(player,&QtAV::AVPlayer::started,this,&MusicPlayer::onStarted);
 
+    connect(player,&QtAV::AVPlayer::stopped,this,&MusicPlayer::onStopped);
 
 }
 
@@ -540,3 +544,11 @@ void MusicPlayer::onStateChanged(QtAV::AVPlayer::State state) {
 
 //    emit mediaStatusChanged(status);
 //}
+void MusicPlayer::onStarted(){
+
+
+    emit started();
+}
+void MusicPlayer::onStopped(){
+
+}

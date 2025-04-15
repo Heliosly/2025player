@@ -35,6 +35,7 @@
      bool haveVideo=0;
      bool haveRecommand=0;
      bool haveMusic=0;
+     bool inMusic=1;
      MusicTable();
      QMap<QString,QList<QPair<QString, double>>> musicFavority;
 
