@@ -125,6 +125,7 @@ void MusicTable::deleteByDir(const QString &dir){
     dirToIndex.remove(dir);
     m_currentHint=musicListModel->columnCount();
 
+    MusicPlayer::instance().stop();
 
 }
 

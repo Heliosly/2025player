@@ -23,6 +23,7 @@ class ControlBar : public DFrame
 public:
     explicit ControlBar(QWidget *parent = nullptr,bool isVideo=0);
 
+~ControlBar();
     void connectVideoFc();
     bool inplay=false;
     bool inHistory=false;
@@ -49,13 +50,19 @@ public:
     ///记录归零之前的音量
     int preVolume=100;
     int  currenttime;
+
+void loadSavedPlayerState();
     void LoadStyleSheet(const QString & url);
 //    void changePlayer(bool temp);
 void PlaySliderValueReset();
+
+void setSpeedIcon(int speedState) ;
+
+void setLoopBtIcon();
+
 signals:
     void toReturnMediaTable();
 private:
-    void ChangeLoopBtIcon();
 
     bool m_isLight=false;
     int preVideoUrl=-1;

@@ -103,3 +103,21 @@ void SettingsManager::deleteSettings(const QString &tag, const QString &key)
     settings->endGroup();
     settings->sync();
 }
+void SettingsManager::savePlayerStates(int volume, int speedState, int loopState)
+{
+    settings->beginGroup("PlayerStates");
+    settings->setValue("volume", volume);
+    settings->setValue("speedState", speedState);
+    settings->setValue("loopState", loopState);
+    settings->endGroup();
+    settings->sync();
+}
+
+void SettingsManager::loadPlayerStates(int &volume, int &speedState, int &loopState)
+{
+    settings->beginGroup("PlayerStates");
+    volume = settings->value("volume", 50).toInt();        // 默认音量 50
+    speedState = settings->value("speedState", 1).toInt(); // 默认 1x
+    loopState = settings->value("loopState", 0).toInt();   // 默认顺序播放
+    settings->endGroup();
+}

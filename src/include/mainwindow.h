@@ -74,6 +74,7 @@ public slots:
     void onShiftScreen();
 
     void onQuit();
+    void syncControlBarState(bool isVideo);
 public emit:
     void showSettingPage();
 private:

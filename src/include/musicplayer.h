@@ -41,6 +41,7 @@ public:
     void historyListRemove(int index);
 };
 
+
 class MusicPlayer : public QObject
 {
     Q_OBJECT

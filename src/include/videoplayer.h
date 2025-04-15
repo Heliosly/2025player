@@ -19,7 +19,6 @@ public:
     QWidget* widget();
     ~VideoPlayer();
 
-
     bool enable=0;
     QtAV::AVPlayer *m_player;      // QtAV 播放器核心
     bool manualStopped=0;

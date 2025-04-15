@@ -21,6 +21,8 @@ MainWindow::MainWindow()
 
     MusicPlayer::instance().player= VideoPlayer::instance()->player();
     MusicPlayer::instance().initConnect();
+    cbar->loadSavedPlayerState();
+
 
     DTitlebar * bar=this->titlebar();
     ;
@@ -160,6 +162,9 @@ MainWindow::MainWindow()
                cbar2, &ControlBar::handleVolumeUp);
        connect(ShortcutManager::instance(), &ShortcutManager::volumeDownTriggered,
                cbar2, &ControlBar::handleVolumeDown);
+//       connect(cbar,&ControlBar::toSyncControlBarState,this,&MainWindow::syncControlBarState);
+
+//       connect(cbar2,&ControlBar::toSyncControlBarState,this,&MainWindow::syncControlBarState);
        connect(music_table,&MusicTable::mediaChange,cbar2,&ControlBar::onVideoMediaChange);
     connect(VideoPlayer::instance(),&VideoPlayer::toCloseVideo,this,&MainWindow::closeVideoPage);
 
@@ -174,6 +179,15 @@ MainWindow::MainWindow()
     connect(music_table,&MusicTable::toRefreshRecommand,recommandPage,&RecommandPage::refreshList,Qt::QueuedConnection);
 }
 void MainWindow::closeVideoPage(){
+      auto cbar2 = VideoPlayer::instance()->m_controlBar;
+    int volume=cbar2->volumeSlider->value();
+    auto loopState=cbar2->loopstate;
+    auto speedState= cbar2->speedstate;
+    cbar->volumeSlider->setValue(volume);
+    cbar->speedstate=speedState;
+    cbar->loopstate=loopState;
+    cbar->setSpeedIcon(speedState);
+    cbar->setLoopBtIcon();
 
     isVideoPage=0;
  VideoPlayer::instance()->enable=0;
@@ -187,6 +201,16 @@ void MainWindow::closeVideoPage(){
 }
 
 void MainWindow::showVideoPage(){
+    auto cbar2 = VideoPlayer::instance()->m_controlBar;
+    int volume=cbar->volumeSlider->value();
+    auto loopState=cbar->loopstate;
+    auto speedState= cbar->speedstate;
+    cbar2->volumeSlider->setValue(volume);
+    cbar2->speedstate=speedState;
+    cbar2->loopstate=loopState;
+    cbar2->setSpeedIcon(speedState);
+    cbar2->setLoopBtIcon();
+
     isVideoPage=1;
     VideoPlayer::instance()->enable=1;
     MusicPlayer::instance().enable=0;

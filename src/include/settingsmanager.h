@@ -18,6 +18,10 @@ public:
       void saveSettingsShortcutsMap(const QMap<QString, QKeySequence> &shortcuts);
     void loadSettingsShortcutsMap(QMap<QString, QKeySequence> &shortcuts);
     void addNewPath(const QString &path);
+
+    void savePlayerStates(int volume, int speedState, int loopState);
+    void loadPlayerStates(int &volume, int &speedState, int &loopState);
+
     void deletePath(const QString &path);
     QStringList paths;
 
@@ -33,6 +37,7 @@ private:
 
     static SettingsManager* s_instance;
     QScopedPointer<QSettings> settings;
+
 
 signals:
     void pathChange();

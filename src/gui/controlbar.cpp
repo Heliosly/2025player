@@ -81,7 +81,7 @@ ControlBar::ControlBar(QWidget *parent,bool _isVideo) : DFrame(parent)
 
     btloop->setObjectName("bt_loop");
     btloop->setFixedSize(QSize(36, 36));
-    this->ChangeLoopBtIcon();
+    this->setLoopBtIcon();
     //    QString styleSheet = "#bt_play:hover, #bt_pre:hover, #bt_stop:hover, #bt_next:hover, #bt_volume:hover, #bt_screen:hover { background-color: #f1f1f1; }"
     //                             "#bt_play:active, #bt_pre:active, #bt_stop:active, #bt_next:active, #bt_volume:active, #bt_screen:active { background-color: #ccc; }"
     //                             "#bt_play, #bt_pre, #bt_stop, #bt_next, #bt_volume, #bt_screen { background-color: transparent; }";
@@ -142,6 +142,49 @@ ControlBar::ControlBar(QWidget *parent,bool _isVideo) : DFrame(parent)
 
 
    }
+void ControlBar::loadSavedPlayerState(){
+  int volume,speedState,loopState;
+    SettingsManager::instance()->loadPlayerStates(volume,speedState,loopState);
+    volumeSlider->setValue(volume);
+    speedstate=speedState;
+     if (loopState == 0) {
+        loopstate = LoopState::Loop;
+    } else if (loopState == 1) {
+        loopstate = LoopState::Random;
+    } else if (loopState == 2) {
+        loopstate = LoopState::Queue;
+    } else {
+        loopstate = LoopState::Loop;
+    }
+     setLoopBtIcon();
+     if(speedstate==0){
+         speedstate=3;
+         onSetSpeed();
+     }else{
+         speedstate--;
+         onSetSpeed();
+     }
+
+}
+ControlBar::~ControlBar(){
+    if(isVideo){
+        int loopState = 0; // 初始化
+        if (loopstate == LoopState::Loop) {
+            loopState = 0;
+        } else if (loopstate == LoopState::Random) {
+            loopState = 1;
+        } else if (loopstate == LoopState::Queue) {
+            loopState = 2;
+        } else {
+            loopState = 0; // 默认值，兜底
+        }
+        int volume = volumeSlider->value();
+        SettingsManager::instance()->savePlayerStates(volume,speedstate,loopState);
+
+
+    }
+
+}
 void ControlBar::connectVideoFc(){
      connect(VideoPlayer::instance(), &VideoPlayer::stateChanged, this, &ControlBar::videoStateChang);
     connect(VideoPlayer::instance(), &VideoPlayer::mediaStatusChanged, this, &ControlBar::videoMediaChange);
@@ -492,11 +535,12 @@ void ControlBar::onLoopChange()
         break;
     }
 
-    this->ChangeLoopBtIcon();
+    this->setLoopBtIcon();
 }
 
-void ControlBar::ChangeLoopBtIcon()
+void ControlBar::setLoopBtIcon()
 {
+
 
     if(m_isLight)
         switch (loopstate)
@@ -774,8 +818,49 @@ void ControlBar::onSetSpeed(){
 
 }
 
+void ControlBar::setSpeedIcon(int speedState) {
+    QString iconPath;
 
+    if (m_isLight) {
+        // 浅色模式图标
+        switch (speedState) {
+            case 0:
+                iconPath = ":/asset/image/0.5xspeed.PNG";
+                break;
+            case 1:
+                iconPath = ":/asset/image/1xspeed.PNG";
+                break;
+            case 2:
+                iconPath = ":/asset/image/1.5xspeed.PNG";
+                break;
+            case 3:
+                iconPath = ":/asset/image/2xspeed.PNG";
+                break;
+            default:
+                return; // 无效状态不处理
+        }
+    } else {
+        // 深色模式图标
+        switch (speedState) {
+            case 0:
+                iconPath = ":/asset/image/0.5xspeed_dark.PNG";
+                break;
+            case 1:
+                iconPath = ":/asset/image/1xspeed_dark.PNG";
+                break;
+            case 2:
+                iconPath = ":/asset/image/1.5xspeed_dark.PNG";
+                break;
+            case 3:
+                iconPath = ":/asset/image/2xspeed_dark.PNG";
+                break;
+            default:
+                return;
+        }
+    }
 
+    btspeed->setIcon(QIcon(iconPath));
+}
 
 
 
@@ -803,7 +888,7 @@ void ControlBar:: shiftThemeIcon(bool isLight){
         btnex->setIconSize(QSize(18, 18));
         btscreen->setIconSize(QSize(24, 24));
         btloop->setIconSize(QSize(36, 36));
-        ChangeLoopBtIcon();
+        setLoopBtIcon();
     }
     else{
           if(!inplay)
@@ -827,14 +912,14 @@ void ControlBar:: shiftThemeIcon(bool isLight){
         btnex->setIconSize(QSize(18, 18));
         btscreen->setIconSize(QSize(24, 24));
 
-        ChangeLoopBtIcon();
+        setLoopBtIcon();
 
     }
 
     m_isLight=isLight	;
 
     //changeloopicon依赖m_isLight;
-    ChangeLoopBtIcon();
+    setLoopBtIcon();
 }
 void ControlBar::onStarted(){
 

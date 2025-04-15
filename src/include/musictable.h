@@ -23,8 +23,7 @@
 #include <QFuture>
 #include <QMutex>
 #include <QFutureWatcher>
- DWIDGET_USE_NAMESPACE
- class CustomListView;  
+ DWIDGET_USE_NAMESPACE class CustomListView;
  class TableItemDelegate;
  class normalItemDelegate;
  class MusicTable : public DFrame {
